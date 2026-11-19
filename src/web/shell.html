@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PubChat</title>
+<style>
+  :root{--ink:#1d2129;--muted:#86909c;--line:#e5e6eb;--bg:#f5f6f8;--brand:#2f6bff;--ok:#00a870;--err:#d93026}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{flex:none;height:52px;display:flex;align-items:center;gap:18px;padding:0 16px;background:#fff;border-bottom:1px solid var(--line);user-select:none}
+  .brand{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:650;white-space:nowrap}
+  .logo{display:block;width:26px;height:26px;border-radius:8px;object-fit:cover;background:linear-gradient(135deg,#2f6bff,#5b8cff);color:#fff;font-size:14px;font-weight:700}
+  .ver{color:var(--muted);font-size:12px;font-weight:400}
+  .tabs{display:flex;gap:4px;background:#f2f3f5;border-radius:10px;padding:3px}
+  .tab{border:0;background:transparent;color:#4e5969;font:inherit;font-weight:600;padding:6px 18px;border-radius:8px;cursor:pointer;outline:none}
+  .tab:hover:not(:disabled){color:var(--ink)}
+  .tab.active{background:#fff;color:var(--brand);box-shadow:0 1px 3px rgba(20,30,60,.12)}
+  .tab:disabled{opacity:.45;cursor:default}
+  .status{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .status i{flex:none;width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(0,168,112,.12)}
+  .status.warn i{background:#ff7d00;box-shadow:0 0 0 3px rgba(255,125,0,.14)}
+  .status.bad i{background:var(--err);box-shadow:0 0 0 3px rgba(217,48,38,.14)}
+  main{flex:1;min-height:0;position:relative}
+  .pane{position:absolute;inset:0;display:flex}
+  .pane[hidden]{display:none}
+  .pane iframe{flex:1;border:0;width:100%;height:100%;background:var(--bg)}
+  .overlay{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);z-index:5}
+  .overlay[hidden]{display:none}
+  .boot{display:flex;flex-direction:column;align-items:center;gap:12px;color:var(--muted)}
+  /* 过渡页与开屏动画同一套品牌符号，避免「绿 P → 蓝转圈」的断层 */
+  .boot .mk{width:44px;height:44px;border-radius:11px;background:#07c160;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;
+    box-shadow:0 6px 18px rgba(7,193,96,.22)}
+  .boot .nm{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:.02em}
+  .spinner{width:26px;height:26px;border-radius:50%;border:3px solid #dfe3e8;border-top-color:#07c160;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .boot .msg{font-size:13px}
+  .retry{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 16px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+  .retry:hover{border-color:var(--brand);color:var(--brand)}
+
+  /* 多实例：左侧实例/房间栏 + 右侧内容 */
+  .chat-layout{display:flex;width:100%;height:100%}
+  .rail{flex:none;width:212px;display:flex;flex-direction:column;background:#fff;border-right:1px solid var(--line);overflow:hidden}
+  .rail[hidden]{display:none}
+  .rail-all{display:flex;align-items:center;gap:8px;margin:10px 10px 4px;padding:8px 10px;border:0;border-radius:9px;background:#f2f3f5;color:#4e5969;font:inherit;font-weight:600;cursor:pointer;text-align:left}
+  .rail-all:hover{background:#e9ebef}
+  .rail-all.active{background:#e8f0ff;color:var(--brand)}
+  .all-ic{font-size:14px;line-height:1}
+  .rail-all .badge{margin-left:auto}
+  .rail-groups{flex:1;min-height:0;overflow:auto;padding:4px 10px 10px}
+  .rg{margin-top:10px}
+  .rg-h{display:flex;align-items:center;gap:6px;padding:4px 4px 5px;color:var(--muted);
+    width:100%;border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;
+    text-align:left;cursor:pointer;border-radius:8px}
+  .rg-h:hover{background:#f5f6f8}
+  .rg-chev{flex:none;width:12px;display:inline-block;transition:transform .12s;transform:rotate(0);opacity:.7}
+  .rg-chev.open{transform:rotate(90deg)}
+  .rg-cur{flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;color:#8a919f}
+  .rg-h .dot{flex:none;width:6px;height:6px;border-radius:50%;background:#c9cdd4}
+  .rg-h .dot.on{background:var(--ok)}
+  .rg-h .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rg-h .badge{margin-left:auto}
+  .rg-rooms{display:flex;flex-direction:column;gap:1px}
+  .rg-room{display:flex;align-items:center;gap:6px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:#4e5969;font:inherit;font-size:13px;cursor:pointer;text-align:left}
+  .rg-room:hover{background:#f5f6f8}
+  .rg-room.active{background:#e8f0ff;color:var(--brand)}
+  .rg-room .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rg-room .badge{margin-left:auto}
+  .rg-hint{margin:2px 4px 4px;padding:7px 9px;color:var(--muted);font-size:12px;line-height:1.5}
+  .rg-hint button{border:0;background:none;padding:0;color:var(--brand);font:inherit;font-size:12px;cursor:pointer}
+  .rail-add{flex:none;display:flex;align-items:center;gap:6px;margin:6px 10px 12px;padding:8px 10px;border:1px dashed var(--line);border-radius:9px;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}
+  .rail-add:hover{color:var(--brand);border-color:var(--brand)}
+  .badge{flex:none;min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:#f53f3f;color:#fff;font-size:11px;font-weight:600;line-height:17px;text-align:center}
+  .badge[hidden]{display:none}
+  .chat-main{flex:1;min-width:0;min-height:0;position:relative}
+  .agg{position:absolute;inset:0;overflow:auto;padding:20px 22px 40px;background:var(--bg)}
+  .agg[hidden]{display:none}
+  .agg h2{font-size:17px;margin:0 0 2px}
+  .agg .muted{color:var(--muted);font-size:12px}
+  .agg-sec{margin:16px 0 6px;color:var(--muted);font-size:12px;font-weight:600}
+  .agg-row{display:flex;align-items:center;gap:9px;width:100%;padding:9px 12px;margin-bottom:4px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+  .agg-row:hover{border-color:#c3d5ff}
+  .inst-tag{flex:none;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 7px;border-radius:6px;background:#f2f3f5;color:#4e5969;font-size:11px}
+  .agg-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .agg-row .tm{flex:none;color:var(--muted);font-size:11px}
+  .agg-empty{padding:26px 0;color:var(--muted);font-size:13px}
+  .agg-note{margin:14px 0 8px;color:var(--muted);font-size:12px}
+  .agg-go{margin:0 0 26px}
+  .frame-wrap{position:absolute;inset:0}
+  .frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg);display:none}
+  .frame-wrap iframe.on{display:block}
+
+  /* 窄屏（手机/小窗）：页签不许折行，状态文字让位，实例栏收窄 */
+  @media (max-width:720px){
+    .topbar{gap:10px;padding:0 10px}
+    .tab{padding:6px 12px;white-space:nowrap}
+    .status{display:none}
+  }
+  @media (max-width:560px){
+    .brand .ver{display:none}
+    .rail{width:168px}
+    .rail-all,.rail-add{margin-left:8px;margin-right:8px}
+    .rail-groups{padding-left:8px;padding-right:8px}
+    .agg{padding:14px 12px 30px}
+    /* 窄屏一行放不下：实例标签和时间占上行，房间名单独占一行，别挤成「N」 */
+    .agg-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+             grid-template-areas:"tag time badge" "name name name";row-gap:3px}
+    .agg-row .inst-tag{grid-area:tag;max-width:100%;min-width:0;justify-self:start}
+    .agg-row .nm{grid-area:name;white-space:normal}
+    .agg-row .tm{grid-area:time}
+    .agg-row .badge{grid-area:badge}
+  }
+  @media (max-width:430px){
+    .brand{font-size:14px;gap:6px}
+    .tab{padding:6px 9px;font-size:13px}
+    .rail{width:146px}
+    .rg-room{padding:6px 8px}
+  }
+
+  /* 云端模式：本机管理面不存在，管理页签改成一块说明面板（不拉必然 404 的设置页） */
+  .cloudnote{position:absolute;inset:0;overflow:auto;background:var(--bg);padding:26px 18px 40px}
+  .cloudnote[hidden]{display:none}
+  .cn-box{max-width:560px;margin:0 auto;background:#fff;border:1px solid var(--line);
+    border-radius:12px;padding:18px 20px}
+  .cn-box h3{margin:0 0 10px;font-size:16px}
+  .cn-box p{margin:0 0 10px;color:#4e5969;line-height:1.7}
+  .cn-box .cn-why{color:var(--muted);font-size:12px}
+  .cn-addr{display:flex;gap:8px;margin:0 0 12px}
+  .cn-addr input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;font:inherit;font-size:12px;color:#4e5969;background:#fafbfc}
+  .cn-btn{flex:none;border:1px solid var(--line);background:#fff;border-radius:8px;
+    padding:8px 14px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+  .cn-btn:hover{border-color:var(--brand);color:var(--brand)}
+  .cn-btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .cn-btn.primary:hover{color:#fff;opacity:.9}
+  .cn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* 部署完成弹窗：不占用管理页签（本机已有正常管理界面），只在壳上盖一层 */
+  .done-mask{position:fixed;inset:0;background:rgba(15,23,42,.42);display:flex;
+    align-items:center;justify-content:center;z-index:150;padding:20px}
+  .done-mask[hidden]{display:none}
+  .done-card{width:420px;max-width:100%;background:#fff;border-radius:14px;
+    box-shadow:0 18px 50px rgba(15,23,42,.25);padding:22px 22px 18px}
+  .done-card h2{margin:0 0 6px;font-size:18px}
+  .done-sub{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.6}
+  .done-row{display:flex;align-items:center;gap:8px;margin:6px 0;padding:9px 11px;
+    background:#f7f8fa;border-radius:9px;font-size:13px}
+  .done-k{flex:0 0 52px;color:#4e5969;font-weight:600}
+  .done-row code{flex:1;min-width:0;font-family:ui-monospace,Consolas,monospace;
+    word-break:break-all;color:var(--ink)}
+  .done-copy{flex:0 0 auto;border:1px solid #c9d2e3;background:#fff;border-radius:6px;
+    padding:3px 10px;font-size:12px;color:#2454c7;cursor:pointer}
+  .done-copy:hover{background:#eef3ff;border-color:#2454c7}
+  .done-go{width:100%;margin-top:14px;padding:11px 14px;border:0;border-radius:9px;
+    background:var(--brand);color:#fff;font:inherit;font-size:14px;cursor:pointer}
+  .done-go:hover{opacity:.92}
+  .done-close{display:block;width:100%;margin-top:8px;padding:8px;border:0;background:none;
+    color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+  .done-close:hover{color:var(--ink)}
+
+  /* 消息提醒气泡 —— 2026-11-15（窗口收进托盘的逻辑在 Rust 侧，这里只管气泡） */
+  .notify-pop{position:fixed;right:18px;bottom:18px;z-index:60;width:min(340px,86vw);
+    background:#fff;border:1px solid #e3e8f2;border-radius:14px;padding:12px 14px;
+    box-shadow:0 14px 40px rgba(24,39,75,.16);cursor:pointer}
+  .notify-pop b{display:block;font-size:13.5px;color:var(--ink);margin-bottom:4px}
+  .notify-pop p{margin:0;font-size:13px;color:var(--muted);line-height:1.55;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .np-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .np-foot span{font-size:11.5px;color:#9aa3b2}
+  .np-foot button{border:0;background:none;color:var(--brand);font:inherit;font-size:12.5px;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><img class="logo" src="/icon.png" alt=""> PubChat <span class="ver" id="ver"></span></div>
+  <nav class="tabs" role="tablist" aria-label="主功能">
+    <button class="tab" id="tabChat" data-tab="chat" role="tab" aria-selected="false" disabled>聊天</button>
+    <button class="tab active" id="tabManage" data-tab="manage" role="tab" aria-selected="true">管理</button>
+    <button class="tab" id="tabMe" data-tab="me" role="tab" aria-selected="false" disabled>我的</button>
+    <button class="tab" id="tabAbout" data-tab="about" role="tab" aria-selected="false">关于</button>
+  </nav>
+  <div class="status" id="status"><i></i><span>正在连接本机服务…</span></div>
+</header>
+
+<!-- 与「我」有关的消息：壳里自己弹一条气泡，点一下就去那个房间 -->
+<div class="notify-pop" id="notifyPop" hidden>
+  <b id="notifyHead"></b>
+  <p id="notifyBody"></p>
+  <div class="np-foot"><span>点一下去这个房间</span><button type="button" id="notifyClose">知道了</button></div>
+</div>
+
+<main>
+  <section class="pane" id="paneChat" role="tabpanel" hidden>
+    <div class="chat-layout">
+      <aside class="rail" id="rail" hidden>
+        <button class="rail-all" id="railAll" type="button"><span class="all-ic">▦</span><span>全部</span><span class="badge" id="railAllUnread" hidden>0</span></button>
+        <div class="rail-groups" id="railGroups"></div>
+        <button class="rail-add" id="railAdd" type="button">+ 添加实例</button>
+      </aside>
+      <div class="chat-main">
+        <div class="agg" id="aggView" hidden>
+          <h2>全部房间</h2>
+          <div class="muted">未读在前，已读在后</div>
+          <div id="aggList"></div>
+        </div>
+        <div class="frame-wrap" id="frameWrap"></div>
+      </div>
+    </div>
+  </section>
+  <section class="pane" id="paneManage" role="tabpanel">
+    <iframe id="settingsFrame" title="管理"></iframe>
+    <div class="cloudnote" id="cloudNote" hidden>
+      <div class="cn-box">
+        <h3 id="cloudNoteTitle">云端模式</h3>
+        <p id="cloudNoteWhy" class="cn-why"></p>
+        <p id="cloudNoteNow"></p>
+        <div class="cn-addr">
+          <input id="cloudAddr" readonly value="">
+          <button class="cn-btn" id="btnCopyCloudAddr" type="button">复制</button>
+        </div>
+        <p id="cloudNoteHint"></p>
+        <div class="cn-row">
+          <button class="cn-btn primary" id="btnRetryLocal" type="button">重试连接本机服务</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="pane" id="paneAbout" role="tabpanel" hidden>
+    <iframe id="aboutFrame" title="关于"></iframe>
+  </section>
+  <div class="overlay" id="overlay">
+    <div class="boot">
+      <div class="mk">P</div>
+      <div class="nm">PubChat</div>
+      <div class="spinner" id="spin"></div>
+      <div class="msg" id="bootMsg">正在连接本机服务…</div>
+      <button class="retry" id="retry" type="button" hidden>重试</button>
+    </div>
+  </div>
+</main>
+
+<!-- 本机部署完成弹窗：不占用管理页签，管理界面保持原样 -->
+<div class="done-mask" id="doneModal" hidden>
+  <div class="done-card" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+    <h2 id="doneTitle">部署完成 🎉</h2>
+    <p class="done-sub">这是聊天室主人的账号，只显示这一次，请点旁边的「复制」保存好。</p>
+    <div class="done-row"><span class="done-k">登录名</span><code id="doneUser"></code><button class="done-copy" id="doneCopyUser" type="button">复制</button></div>
+    <div class="done-row"><span class="done-k">密码</span><code id="donePass"></code><button class="done-copy" id="doneCopyPass" type="button">复制</button></div>
+    <button class="done-go" id="doneGo" type="button">进入聊天室</button>
+    <button class="done-close" id="doneClose" type="button">稍后再说</button>
+  </div>
+</div>
+
+<script src="device.js"></script>
+<script>
+(function () {
+  // 最后一道兜底：脚本一旦抛错就露出「重试」遮罩，别让整页停在白屏
+  window.addEventListener('error', function (e) {
+    try {
+      var ov = document.getElementById('overlay');
+      if (ov) {
+        ov.hidden = false;
+        var st = document.getElementById('status');
+        if (st) st.textContent = '页面加载出错：' + ((e && e.message) || '未知错误') + '（点重试）';
+        var btn = document.getElementById('retry');
+        if (btn) btn.hidden = false;
+      }
+    } catch (x) {}
+  });
+  var state = null;
+  var localReady = false;      // 本机聊天室已初始化（有成员）
+  var chatReady = false;       // 有任何一个可用实例
+  var setupDone = false;       // 向导页已经建好账号/导入完，但还停在设置页看 Key
+  var setupConsumed = false;   // 已经离开过向导页，之后设置页换成管理页
+  var booted = false;
+  var cloudMode = false;       // 本机后端没起来/这台设备没认领时，壳只用打包资源连云端实例
+
+  var instances = [{ id: 'local', kind: 'local', name: '本机', url: '' }];
+  var frames = {};             // iid -> iframe
+  var instData = {};           // iid -> {name, connected, active, rooms: [], at, snapshot}
+  var pendingCreds = {};       // iid -> {u, k}，只在内存里，用来给远端 iframe 自动登录一次
+  var pendingRoom = {};        // iid -> slug，等实例连上后打开
+  var pendingMe = {};          // iid -> true，实例连上后再把「我的」指令送进去
+  var view = 'local';          // 'all' 或实例 id
+  var loadedOnce = {};         // iid -> 已发过 hello
+  var frameNonce = {};         // iid -> 只有 hash 变化时加在查询串里的重载标记
+  var adoptedNames = {};       // iid -> 已把远端自报的名字写回实例配置
+  var bootLanded = false;      // 第一次拿到可用实例时落在列表，之后尊重用户当前视图
+  var paneMode = '';           // 设置页显示什么：'' 自动 / 'wizard' 首启向导 / 'settings' 管理页
+
+  // 首启引导标记：第一次打开时先展示三选项（本机部署 / 云端部署 / 加入），选过就不再弹
+  var LS_GUIDED = 'pubchat.shell.guided';
+  // 从 tauri.localhost 点「本机部署」跳过来时带 ?auto=1：下次进向导自动跑一次部署，
+  // 用户不用再点第二次。部署完成后清掉参数，避免刷新重复执行。
+  var autoBoot = false;
+  try { autoBoot = /[?&]auto=1/.test(location.search); } catch (e) {}
+  function clearAutoBoot() {
+    autoBoot = false;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
+  function guidedDone() {
+    try { return localStorage.getItem(LS_GUIDED) === '1'; } catch (e) { return true; }
+  }
+  function markGuided() {
+    try { localStorage.setItem(LS_GUIDED, '1'); } catch (e) {}
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var settingsFrame = $('settingsFrame');
+  var aboutFrame = $('aboutFrame');
+  var frameWrap = $('frameWrap');
+  var overlay = $('overlay');
+
+  function setStatus(text, kind) {
+    var el = $('status');
+    el.className = 'status' + (kind ? ' ' + kind : '');
+    el.lastElementChild.textContent = text;
+  }
+
+  function originBase() {
+    return location.protocol + '//' + location.hostname;
+  }
+
+  /* ---------------- 云端模式（本机后端读不到时的兜底） ----------------
+   * 打包进应用包的外壳没有同源后端：/api/state 与 /healthz 都会落空。
+   * 这时不把用户堵在启动页，而是直接挂上默认实例聊天——指向实例一律用
+   * 它的对外地址（inst.url），不假设壳和实例同源。默认地址由打包脚本写进
+   * 包里，临时调试用 ?inst= 覆盖。 */
+  // 公共源码里不写死任何实例域名：默认值留空，打包时由脚本注入，用户也可用 ?inst= 覆盖。
+  var CLOUD_DEFAULT = '';
+
+  var LS_INST_URL = 'pubchat.shell.inst';
+
+  function cloudInstUrl() {
+    var q = '';
+    try { q = new URL(location.href).searchParams.get('inst') || ''; } catch (e) {}
+    if (!q) { try { q = localStorage.getItem(LS_INST_URL) || ''; } catch (e) {} }
+    var u = String(q || CLOUD_DEFAULT).replace(/\/+$/, '');
+    if (u && !/^https?:\/\//i.test(u)) {
+      // 没写协议时按地址本身判断：回环/内网一定是 http，其余按 https 走
+      u = (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(u) ? 'http://' : 'https://') + u;
+    }
+    return u ? u + '/' : '';
+  }
+
+  function hostOf(u) {
+    try { return new URL(u).hostname; } catch (e) { return String(u || ''); }
+  }
+
+  /* 管理入口的地址口径与手机端 m.html 一致：
+     回环/内网 = 聊天端口 +1；公网实例 = 对外地址 + /admin.html（只在服务器上或隧道里打得开）。
+     本机服务活着但这台设备没认领时，管理口就是壳自己这个源。 */
+  function adminAddrFor(lockedLocal) {
+    if (lockedLocal) return location.origin + '/admin.html';
+    var u = cloudInstUrl();
+    if (!u) return '';
+    var p = null;
+    try { p = new URL(u); } catch (e) { return u + 'admin.html'; }
+    var h = p.hostname;
+    var lan = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(h) || h === 'localhost';
+    if (lan && p.port) return p.protocol + '//' + h + ':' + (parseInt(p.port, 10) + 1) + '/admin.html';
+    return u.replace(/\/$/, '') + '/admin.html';
+  }
+
+  // 真窗口实测：包内 origin 上 /api/state 不是「连不上」，而是 Tauri 资源口回了一份
+  // HTML，r.json() 抛的是语法错，原始 message 会把 `Unexpected token '<', "<!DOCTYPE"`
+  // 这样一串直接印到用户脸上。只保留有意义的 HTTP 状态码，其余一律换成能说清的话。
+  function whyText(errText) {
+    var m = /^HTTP (\d{3})/.exec(errText || '');
+    if (m) return '读不到本机状态：HTTP ' + m[1];
+    return '读不到本机状态：这个地址上没有本机服务在应答（它回的不是 JSON，多半是包内没有本机服务）';
+  }
+
+  function renderCloudNote(errText, lockedLocal) {
+    var url = cloudInstUrl();
+    $('cloudNoteTitle').textContent = lockedLocal ? '本机服务在跑，但这台设备还没有管理凭证'
+                                                  : '云端模式：本机服务没在跑';
+    $('cloudNoteWhy').textContent = whyText(errText);
+    $('cloudNoteNow').textContent = url
+      ? '聊天先挂在「' + hostOf(url) + '」上，房间、消息、账号都在那个实例自己的地址里，和这个壳同不同源没关系。'
+      : '现在一个实例都没有，聊天暂时用不起来。';
+    $('cloudAddr').value = adminAddrFor(lockedLocal);
+    $('cloudNoteHint').textContent = lockedLocal
+      ? '把上面这条地址在本机浏览器打开，用启动时那条 5 分钟的一次性链接认领这台设备，认完回来点「重试连接本机服务」。'
+      : '想在这台电脑上自己开房间，就把本机服务带上：PubChat --sidecar，或在数据目录的 desktop.json 里写 {"sidecar": true} 再重启。云端实例的管理口只绑服务器本机，不对外——上面那条地址要在服务器上（或 SSH 隧道里）才打得开。';
+    settingsFrame.hidden = true;
+    $('cloudNote').hidden = false;
+    // 0.8.16：云端实例自己也提供管理页（manage.html，走 WS + 用户身份），
+    // 只要拿得到实例地址，就别用「本机服务没在跑」这块面板盖住管理页签。
+    if (cloudInstUrl()) {
+      $('cloudNote').hidden = true;
+      settingsFrame.hidden = false;
+    }
+  }
+
+  function enterCloudMode(errText, lockedLocal) {
+    cloudMode = true;
+    state = null;
+    localReady = false;
+    var url = cloudInstUrl();
+    instances = url ? [{ id: 'cloud', kind: 'remote', name: hostOf(url), url: url }] : [];
+    chatReady = instances.length > 0;
+    view = chatReady ? instances[0].id : 'local';
+    $('ver').textContent = '云端模式';
+    $('tabChat').disabled = !chatReady;
+    $('tabMe').disabled = !chatReady;
+    // 「关于」页照常可点：静态介绍/下载入口在云端模式也能看，只有部署信息取不到
+    $('tabAbout').disabled = false;
+    renderCloudNote(errText, lockedLocal);
+    if (chatReady) {
+      // 云端模式只有一个实例、而且没有 /api/state 可供列表取数，
+      // 所以仍直接进这个实例（帧由下面的 switchView 起），不落到空列表。
+      renderAll();
+      if (!guidedDone() || autoBoot) {
+        // 第一次打开：先给三选项（本机部署 / 云端服务器部署 / 加入他人聊天室）。
+        // renderCloudNote 会把设置帧藏起来、露出云端说明；这里反过来，先把三选项摆出来。
+        $('cloudNote').hidden = true;
+        settingsFrame.hidden = false;
+        paneMode = 'wizard';
+        activate('manage');
+        setStatus('第一次打开：先选一种部署方式', 'warn');
+      } else {
+        activate('chat');
+        setStatus('云端模式 · ' + hostOf(url), 'warn');
+      }
+    } else {
+      activate('manage');
+      setStatus('云端模式 · 没有可用实例', 'bad');
+    }
+    booted = true;
+    overlay.hidden = true;
+  }
+
+  function bootFail(errText) {
+    setStatus('本机服务连接失败', 'bad');
+    // /healthz 不要设备凭证：靠它分清「本机服务没起」与「起了但这台设备没认领」
+    fetch('/healthz', { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function () { enterCloudMode(errText, true); })
+      .catch(function () { enterCloudMode(errText, false); });
+  }
+
+  function copyCloudAddr() {
+    var el = $('cloudAddr');
+    el.select();
+    try { el.setSelectionRange(0, el.value.length); } catch (e) {}
+    var done = function () { setStatus('已复制管理地址', 'warn'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(el.value).then(done, function () {
+        try { document.execCommand('copy'); done(); } catch (e2) { setStatus('复制失败，手动选中复制', 'bad'); }
+      });
+      return;
+    }
+    try { document.execCommand('copy'); done(); } catch (e3) { setStatus('复制失败，手动选中复制', 'bad'); }
+  }
+
+  function retryLocal() {
+    cloudMode = false;
+    booted = false;
+    $('cloudNote').hidden = true;
+    settingsFrame.hidden = false;
+    overlay.hidden = false;
+    $('spin').hidden = false;
+    $('retry').hidden = true;
+    $('bootMsg').textContent = '正在连接本机服务…';
+    fetchState(false);
+  }
+
+  function pickUser(users) {
+    if (!users || !users.length) return null;
+    for (var i = 0; i < users.length; i++) if (users[i].is_admin) return users[i];
+    return users[0];
+  }
+
+  function localUsable() {
+    return !!(state && localReady && state.serving);
+  }
+
+  function activeInst() {
+    for (var i = 0; i < instances.length; i++) if (instances[i].id === view) return instances[i];
+    return null;
+  }
+
+  function instName(iid) {
+    for (var i = 0; i < instances.length; i++) {
+      if (instances[i].id === iid) {
+        if (iid === 'local') return '本机';
+        var cfg = String(instances[i].name || '').trim();
+        var live = (instData[iid] && instData[iid].name) || '';
+        var host = '';
+        try { host = new URL(instances[i].url).hostname; } catch (e) {}
+        // 登记时的默认名就是主机名或「远端实例」；实例自己报了名字就以它为准，用户改过名则听用户的
+        if (live && (!cfg || cfg === host || cfg === '远端实例')) return live;
+        return cfg || live || instances[i].url || '远端实例';
+      }
+    }
+    return iid;
+  }
+
+  function baseFor(inst) {
+    if (!inst) return '';
+    if (inst.kind === 'local') return originBase() + ':' + state.port + '/';
+    return String(inst.url || '').replace(/\/$/, '') + '/';
+  }
+
+  function frameOrigin(inst) {
+    var base = baseFor(inst);
+    try { return new URL(base).origin; } catch (e) { return '*'; }
+  }
+
+  function credFor(inst) {
+    if (!inst) return null;
+    // 向导刚建好账号时，state.users 可能还没刷新到；这时用向导直接交来的凭据
+    if (pendingCreds[inst.id]) return pendingCreds[inst.id];
+    if (inst.kind === 'local') {
+      var u = pickUser(state && state.users);
+      return (u && u.client_id && u.key1) ? { u: u.client_id, k: u.key1 } : null;
+    }
+    return pendingCreds[inst.id] || null;
+  }
+
+  function urlFor(inst) {
+    var url = baseFor(inst) + '?iid=' + encodeURIComponent(inst.id);
+    if (frameNonce[inst.id]) url += '&r=' + frameNonce[inst.id];
+    var c = credFor(inst);
+    if (c) url += '#u=' + encodeURIComponent(c.u) + '&k=' + encodeURIComponent(c.k) + (c.first ? '&first=1' : '');
+    return url;
+  }
+
+  function postToFrame(inst, obj) {
+    var fr = frames[inst.id];
+    if (!fr || !fr.contentWindow) return false;
+    try { fr.contentWindow.postMessage(obj, frameOrigin(inst)); } catch (e) { return false; }
+    return true;
+  }
+
+  function iidForSource(src) {
+    for (var iid in frames) {
+      if (frames[iid] && frames[iid].contentWindow === src) return iid;
+    }
+    return '';
+  }
+
+  /* ---------------- 列表快照 ----------------
+   * 首屏是列表、进实例才建 iframe，代价是没进过的实例没有帧、也就没有
+   * pubchat-host-state 上报，列表会空着。快照把上次会话各实例报过的房间与未读
+   * 存进 localStorage，开机先按它画列表；一旦进入该实例，一律由实时上报覆盖。
+   * 不进实例时未读不增长，看到的是上次会话那一次的数——这是列表优先换来的代价。 */
+  var LS_LIST_SNAPSHOT = 'pubchat.shell.listSnapshot';   // iid -> {name,active,rooms,notices,at}
+
+  function readSnapshot() {
+    try { return JSON.parse(localStorage.getItem(LS_LIST_SNAPSHOT) || '{}') || {}; } catch (e) { return {}; }
+  }
+
+  function writeSnapshot(obj) {
+    try { localStorage.setItem(LS_LIST_SNAPSHOT, JSON.stringify(obj)); } catch (e) {}
+  }
+
+  function saveSnapshot(iid, d) {
+    var all = readSnapshot();
+    all[iid] = { name: d.name || '', active: d.active || '',
+                 rooms: (d.rooms || []).slice(0, 60),
+                 notices: (d.notices || []).slice(0, 5), at: d.at || Date.now() };
+    writeSnapshot(all);
+  }
+
+  // 只回填「这一轮还没有活帧」的实例：快照不许压过实时数据
+  function hydrateFromSnapshot() {
+    var all = readSnapshot();
+    for (var i = 0; i < instances.length; i++) {
+      var iid = instances[i].id;
+      if (frames[iid] || !all[iid]) continue;
+      var s = all[iid];
+      instData[iid] = { name: s.name || '', connected: false, active: s.active || '',
+                        rooms: Array.isArray(s.rooms) ? s.rooms : [],
+                        notices: Array.isArray(s.notices) ? s.notices : [],
+                        at: s.at || 0, snapshot: true };
+    }
+  }
+
+  /* ---------------- 实例 iframe（进聊天页才建，不再开机全建） ---------------- */
+
+  function ensureFrame(iid) {
+    var inst = null;
+    for (var i = 0; i < instances.length; i++) if (instances[i].id === iid) inst = instances[i];
+    if (!inst) return;
+    var fr = frames[iid];
+    var next = urlFor(inst);
+    if (!fr) {
+      fr = document.createElement('iframe');
+      fr.title = instName(iid);
+      fr.dataset.iid = iid;
+      (function (id) {
+        fr.addEventListener('load', function () {
+          loadedOnce[id] = true;
+          postHello(id);
+        });
+      })(iid);
+      frames[iid] = fr;
+      frameWrap.appendChild(fr);
+      fr.src = next;
+    } else if (fr.dataset.src !== next) {
+      // 只改 # 不会重载文档（例如本机刚建好、hash 里才补上账号密码），
+      // 给 HTTP 部分加一次性标记，强制真实导航；否则永远停在等待页。
+      if (String(fr.dataset.src || '').split('#')[0] === next.split('#')[0]) {
+        frameNonce[iid] = Date.now().toString(36);
+        next = urlFor(inst);
+      }
+      fr.src = next;
+    }
+    fr.dataset.src = next;
+    fr.classList.toggle('on', view === iid);
+  }
+
+  function pruneFrames() {
+    var wanted = {};
+    for (var i = 0; i < instances.length; i++) wanted[instances[i].id] = true;
+    for (var iid in frames) {
+      if (!wanted[iid]) {
+        try { frames[iid].remove(); } catch (e) {}
+        delete frames[iid];
+        delete instData[iid];
+        delete loadedOnce[iid];
+        delete frameNonce[iid];
+      }
+    }
+    var snap = readSnapshot(), dirty = false;
+    for (var sid in snap) { if (!wanted[sid]) { delete snap[sid]; dirty = true; } }
+    if (dirty) writeSnapshot(snap);
+  }
+
+  function postHello(iid) {
+    var inst = null;
+    for (var i = 0; i < instances.length; i++) if (instances[i].id === iid) inst = instances[i];
+    if (!inst) return;
+    postToFrame(inst, { type: 'pubchat-host-hello', v: 2 });
+  }
+
+  /* ---------------- 未读/分组渲染 ---------------- */
+
+  function roomsOf(iid) {
+    var d = instData[iid];
+    return (d && d.rooms) ? d.rooms : [];
+  }
+
+  function instUnread(iid) {
+    var n = 0, rooms = roomsOf(iid);
+    for (var i = 0; i < rooms.length; i++) n += (rooms[i].unread || 0);
+    return n;
+  }
+
+  function totalUnread() {
+    var n = 0;
+    for (var i = 0; i < instances.length; i++) n += instUnread(instances[i].id);
+    return n;
+  }
+
+  function setBadge(el, n) {
+    if (!el) return;
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.hidden = !n;
+  }
+
+  /* S2 分组折叠：状态按实例 id 存，默认只有本机与「当前正在看的实例」展开，其余收起 */
+  var LS_RAIL_COLLAPSE = 'pubchat.shell.railCollapsed';   // {iid: true=展开}
+
+  function railOpenState() {
+    try { return JSON.parse(localStorage.getItem(LS_RAIL_COLLAPSE) || '{}') || {}; } catch (e) { return {}; }
+  }
+
+  function isRailOpen(inst) {
+    var saved = railOpenState();
+    if (typeof saved[inst.id] === 'boolean') return saved[inst.id];
+    if (inst.kind === 'local') return true;
+    return inst.id === view;              // 没记过的远端实例：只有当前视图展开
+  }
+
+  function setRailOpen(iid, open) {
+    var saved = railOpenState();
+    saved[iid] = !!open;
+    try { localStorage.setItem(LS_RAIL_COLLAPSE, JSON.stringify(saved)); } catch (e) {}
+  }
+
+  function renderRail() {
+    var show = chatReady && (instances.length > 1 || !localUsable());
+    $('rail').hidden = !show;
+
+    setBadge($('railAllUnread'), totalUnread());
+    $('railAll').classList.toggle('active', view === 'all');
+
+    var host = $('railGroups');
+    host.innerHTML = '';
+    for (var i = 0; i < instances.length; i++) {
+      var inst = instances[i];
+      var data = instData[inst.id] || {};
+      var usable = inst.kind === 'local' ? localUsable() : true;
+
+      var g = document.createElement('div');
+      g.className = 'rg';
+
+      var open = isRailOpen(inst);
+      var activeRoom = null;
+      if (usable) {
+        var ar = roomsOf(inst.id);
+        for (var k = 0; k < ar.length; k++) {
+          if (ar[k].slug === data.active) { activeRoom = ar[k]; break; }
+        }
+      }
+
+      var h = document.createElement('button');
+      h.type = 'button';
+      h.className = 'rg-h';
+      h.dataset.iid = inst.id;
+      h.setAttribute('aria-expanded', open ? 'true' : 'false');
+      var chev = document.createElement('span');
+      chev.className = 'rg-chev' + (open ? ' open' : '');
+      chev.textContent = '›';
+      var dot = document.createElement('span');
+      dot.className = 'dot' + (data.connected ? ' on' : '');
+      var nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.textContent = instName(inst.id);
+      nm.title = inst.kind === 'local' ? '本机聊天室' : String(inst.url || '');
+      h.appendChild(chev);
+      h.appendChild(dot);
+      h.appendChild(nm);
+      // 折叠时当前会话仍要看得见，否则切走就找不回来了
+      if (!open && activeRoom) {
+        var cur = document.createElement('span');
+        cur.className = 'rg-cur';
+        cur.textContent = activeRoom.title || activeRoom.slug;
+        h.appendChild(cur);
+      }
+      var gb = document.createElement('span');
+      gb.className = 'badge';
+      h.appendChild(gb);
+      setBadge(gb, instUnread(inst.id));
+      (function (iid, wasOpen) {
+        h.addEventListener('click', function () {
+          setRailOpen(iid, !wasOpen);
+          renderRail();
+        });
+      })(inst.id, open);
+      g.appendChild(h);
+
+      if (!usable) {
+        var hint = document.createElement('div');
+        hint.className = 'rg-hint';
+        hint.textContent = inst.kind === 'local' ? '还没有创建自己的聊天室。' : '实例还没配置好。';
+        if (inst.kind === 'local') {
+          var go = document.createElement('button');
+          go.type = 'button';
+          go.textContent = '去创建 →';
+          go.addEventListener('click', openSetup);
+          hint.appendChild(go);
+        }
+        g.appendChild(hint);
+      } else if (open) {
+        var list = document.createElement('div');
+        list.className = 'rg-rooms';
+        var rooms = roomsOf(inst.id);
+        for (var r = 0; r < rooms.length; r++) {
+          var room = rooms[r];
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'rg-room' + (view === inst.id && data.active === room.slug ? ' active' : '');
+          var rn = document.createElement('span');
+          rn.className = 'nm';
+          rn.textContent = room.title || room.slug;
+          b.appendChild(rn);
+          var rb = document.createElement('span');
+          rb.className = 'badge';
+          b.appendChild(rb);
+          setBadge(rb, room.unread || 0);
+          (function (iid, slug) {
+            b.addEventListener('click', function () { openRoom(iid, slug); });
+          })(inst.id, room.slug);
+          list.appendChild(b);
+        }
+        g.appendChild(list);
+        // 帧没起来时这个实例没有任何实时数据（首启升级后、刚加的远端实例都是这样）：
+        // 给一条明确入口，别让列表空着又没有可点的地方。
+        if (!frames[inst.id]) {
+          var into = document.createElement('div');
+          into.className = 'rg-hint';
+          into.textContent = '未进入该实例，房间与未读是上次会话的记录。';
+          var goIn = document.createElement('button');
+          goIn.type = 'button';
+          goIn.textContent = '进入 →';
+          (function (id) {
+            goIn.addEventListener('click', function () { switchView(id, true); });
+          })(inst.id);
+          into.appendChild(goIn);
+          g.appendChild(into);
+        }
+      }
+      host.appendChild(g);
+    }
+  }
+
+  function fmtTime(ts) {
+    if (!ts) return '';
+    // app.js 上报的是毫秒（Date.parse）；兼容秒级时间戳
+    var d = new Date(ts < 1e12 ? ts * 1000 : ts);
+    if (isNaN(d.getTime())) return '';
+    var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+    var dd = ('0' + d.getDate()).slice(-2);
+    var hh = ('0' + d.getHours()).slice(-2);
+    var mi = ('0' + d.getMinutes()).slice(-2);
+    return mm + '/' + dd + ' ' + hh + ':' + mi;
+  }
+
+  /* 列表空着要「进入」时挑哪个实例：优先本机，其次第一个远端。
+     restoreView() 可能返回 'all'，这里要的一定是真实例，所以另开一条。 */
+  function firstInstId() {
+    if (localUsable()) return 'local';
+    for (var i = 0; i < instances.length; i++) {
+      if (instances[i].id !== 'local') return instances[i].id;
+    }
+    return instances.length ? instances[0].id : '';
+  }
+
+  function renderAgg() {
+    var host = $('aggList');
+    host.innerHTML = '';
+    var unreadRows = [], readRows = [];
+    for (var i = 0; i < instances.length; i++) {
+      var inst = instances[i];
+      var rooms = roomsOf(inst.id);
+      for (var r = 0; r < rooms.length; r++) {
+        var room = rooms[r];
+        var row = { iid: inst.id, name: instName(inst.id), room: room,
+                    unread: room.unread || 0, ts: room.lastTs || 0 };
+        if (row.unread > 0) unreadRows.push(row); else readRows.push(row);
+      }
+    }
+    unreadRows.sort(function (a, b) { return b.unread - a.unread || b.ts - a.ts; });
+    readRows.sort(function (a, b) { return b.ts - a.ts; });
+
+    if (!unreadRows.length && !readRows.length) {
+      var empty = document.createElement('div');
+      empty.className = 'agg-empty';
+      empty.textContent = chatReady ? '还没有房间。进入任一实例即可开始聊天。' : '还没有可用实例。';
+      host.appendChild(empty);
+      // 列表优先之后，没进过实例时这里必然为空：把「进去」这一步做成可点的，
+      // 否则首启升级后既没有房间行、也没有别的入口能进聊天。
+      if (chatReady && instances.length) {
+        var target = firstInstId();
+        if (target) {
+          var goBtn = document.createElement('button');
+          goBtn.type = 'button';
+          goBtn.className = 'retry agg-go';
+          goBtn.textContent = '进入「' + instName(target) + '」 →';
+          goBtn.addEventListener('click', function () { switchView(target, true); });
+          host.appendChild(goBtn);
+        }
+      }
+      return;
+    }
+
+    // 有快照行但没有实时帧时说明一句数是从哪来的，别让人以为未读丢了
+    var snapOnly = 0;
+    for (var s = 0; s < instances.length; s++) {
+      if (!frames[instances[s].id] && roomsOf(instances[s].id).length) snapOnly++;
+    }
+    if (snapOnly) {
+      var note = document.createElement('div');
+      note.className = 'agg-note';
+      note.textContent = '进入实例后未读才会实时更新；下面这些是上次会话留下的记录。';
+      host.appendChild(note);
+    }
+
+    function section(title, rows) {
+      if (!rows.length) return;
+      var sec = document.createElement('div');
+      sec.className = 'agg-sec';
+      sec.textContent = title;
+      host.appendChild(sec);
+      rows.forEach(function (row) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'agg-row';
+        var tag = document.createElement('span');
+        tag.className = 'inst-tag';
+        tag.textContent = row.name;
+        var nm = document.createElement('span');
+        nm.className = 'nm';
+        nm.textContent = row.room.title || row.room.slug;
+        var tm = document.createElement('span');
+        tm.className = 'tm';
+        tm.textContent = fmtTime(row.ts);
+        b.appendChild(tag);
+        b.appendChild(nm);
+        b.appendChild(tm);
+        if (row.unread) {
+          var badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = row.unread > 99 ? '99+' : String(row.unread);
+          b.appendChild(badge);
+        }
+        b.addEventListener('click', function () { openRoom(row.iid, row.room.slug); });
+        host.appendChild(b);
+      });
+    }
+    section('未读', unreadRows);
+    section('已读', readRows);
+  }
+
+  function renderAll() {
+    renderRail();
+    renderAgg();
+  }
+
+  /* ---------------- 视图切换 ---------------- */
+
+  function switchView(iid, showChat) {
+    view = iid;
+    try { localStorage.setItem('pubchat.shell.view', iid); } catch (e) {}
+    var agg = $('aggView');
+    var isAgg = iid === 'all';
+    // 「进聊天页才加载 iframe」：只有落到某个实例上才为它建帧，列表视图一帧不建
+    if (!isAgg) ensureFrame(iid);
+    agg.hidden = !isAgg;
+    for (var id in frames) frames[id].classList.toggle('on', !isAgg && id === iid);
+    if (showChat && $('paneChat').hidden) activate('chat');
+    if (isAgg) renderAgg();
+    renderRail();
+    if (showChat) {
+      if (isAgg) {
+        setStatus('全部实例 · ' + totalUnread() + ' 条未读');
+      } else {
+        var inst = activeInst();
+        setStatus('当前实例：' + instName(iid) + (inst && inst.kind === 'local' ? '（本机）' : ''));
+      }
+    }
+  }
+
+  function openRoom(iid, slug) {
+    // 从「全部」聚合视图点进折叠实例里的会话：先把那个实例展开，否则点完看不见自己在哪
+    setRailOpen(iid, true);
+    switchView(iid, true);
+    var inst = null;
+    for (var i = 0; i < instances.length; i++) if (instances[i].id === iid) inst = instances[i];
+    if (!inst) return;
+    var data = instData[iid];
+    if (data && data.connected) {
+      pendingRoom[iid] = '';
+      postToFrame(inst, { type: 'pubchat-open-room', v: 2, room: slug });
+    } else {
+      pendingRoom[iid] = slug;
+      postHello(iid);
+    }
+  }
+
+  function openSetup() {
+    paneMode = 'wizard';
+    setupConsumed = false;
+    loadSettings(true);
+    activate('manage');
+  }
+
+  function openInstanceSettings() {
+    paneMode = 'settings';
+    activate('manage');
+    loadSettings(true);
+    try {
+      settingsFrame.contentWindow.postMessage({ type: 'pubchat-goto-tab', tab: 'instance' }, location.origin);
+    } catch (e) {}
+  }
+
+  /* ---------------- 设置页 ---------------- */
+
+  // 管理页 = 0.8.10 那套完整管理页（成员与邀请/智能体席位/已授权设备/本机服务…），
+  // 本机与服务器同一份 settings.html；权限跟账号走（owner 的一级 Key），不再要认领链接。
+  function manageUrl() {
+    var inst = activeInst() || instances[0] || null;
+    var base = (inst && inst.url) ? String(inst.url).replace(/\/+$/, '') : '';
+    if (!base) return '/settings.html?embed=1';
+    return base + '/settings.html?embed=1';
+  }
+
+  function settingsUrl() {
+    // chat=1：已经有能进的聊天了，向导页据此才亮出「直接进聊天」这条出口，
+    // 一个实例都没有时不给点不动的按钮。
+    var chatQ = (chatReady || (state && state.initialized)) ? '&chat=1' : '';
+    if (paneMode === 'wizard') return '/setup.html?embed=1' + chatQ + (autoBoot ? '&auto=1' : '');
+    if (paneMode === 'settings') return '/settings.html?embed=1';
+    // 一个实例都没有：先走首启向导
+    if (!instances.length && !chatReady) return '/setup.html?embed=1';
+    return manageUrl();
+  }
+
+  function loadSettings(force) {
+    var url = settingsUrl();
+    var current = settingsFrame.getAttribute('src') || '';
+    // 连 query 一起比较：auto=1（自动部署）和 chat=1 变化时必须重设，只比路径会把它们吞掉
+    if (force || current !== url) settingsFrame.src = url;
+  }
+
+  /* ---------------- 页签 ---------------- */
+
+  var curTab = 'manage';       // 当前顶层页签：chat / manage / about（我的不开面板，不占位）
+
+  function activate(tab) {
+    if (tab === 'chat' && !chatReady) return;
+    if (tab === 'about' && (!localReady && !chatReady)) return;
+    if (tab === 'chat' && setupDone && !setupConsumed) {
+      setupConsumed = true;
+    }
+    curTab = tab;
+    $('tabChat').classList.toggle('active', tab === 'chat');
+    $('tabManage').classList.toggle('active', tab === 'manage');
+    $('tabAbout').classList.toggle('active', tab === 'about');
+    $('tabChat').setAttribute('aria-selected', tab === 'chat' ? 'true' : 'false');
+    $('tabManage').setAttribute('aria-selected', tab === 'manage' ? 'true' : 'false');
+    $('tabAbout').setAttribute('aria-selected', tab === 'about' ? 'true' : 'false');
+    $('paneChat').hidden = tab !== 'chat';
+    $('paneManage').hidden = tab !== 'manage';
+    $('paneAbout').hidden = tab !== 'about';
+    if (tab === 'chat') {
+      if (view === 'all') switchView('all', true);
+      else switchView(view, true);
+    } else if (tab === 'about') {
+      if (!aboutFrame.src || aboutFrame.src === 'about:blank') aboutFrame.src = '/about.html?embed=1';
+      pushNotices();
+      setStatus('关于');
+    } else if (tab === 'manage') {
+      loadSettings(false);
+    }
+  }
+
+  /* 「关于」里的往期公告：数据在聊天帧那边（每个实例一份，存在实例自己的源上），
+     壳只是转一手。帧还没报过状态时给空数组，关于页显示「暂无公告」。 */
+  function pushNotices() {
+    var inst = activeInst() || instances[0];
+    var list = (inst && instData[inst.id] && instData[inst.id].notices) || [];
+    try {
+      aboutFrame.contentWindow.postMessage({ type: 'pubchat-about-notices', list: list },
+                                            location.origin);
+    } catch (e) {}
+  }
+
+  /* 管理页签统一走 manage.html（本机与服务器同一份）。0.8.15 的「切聊天页弹卡片」
+     已被 0.8.16 的独立管理页取代：添加智能体仍回聊天页弹窗，其余管理都在管理页。 */
+
+  /* 「我的」不另开文档：把指令发给当前实例的聊天帧，由它弹自己那份 sheet */
+  function showMe() {
+    if (!chatReady) return;
+    // 列表优先之后，当前视图可能没有帧，指令发出去没人接。所以先把「我的」
+    // 落到一个真实例上并起它的帧——sheet 在那个帧里，不进实例根本看不见。
+    var iid = (view !== 'all' && activeInst()) ? view : '';
+    if (!iid) {
+      iid = restoreView();
+      if (iid === 'all') iid = firstInstId();
+    }
+    if (!iid) return;
+    switchView(iid, true);
+    var inst = null;
+    for (var i = 0; i < instances.length; i++) if (instances[i].id === iid) inst = instances[i];
+    if (!inst) return;
+    var data = instData[iid];
+    if (data && data.connected) {
+      pendingMe[iid] = false;
+      if (postToFrame(inst, { type: 'pubchat-host-me' })) { setStatus('我的：账号与智能体'); return; }
+    }
+    pendingMe[iid] = true;
+    postHello(iid);
+    setStatus('等实例连上后打开「我的」…', 'warn');
+  }
+
+  /* ---------------- 状态 ---------------- */
+
+  function restoreView() {
+    var saved = '';
+    try { saved = localStorage.getItem('pubchat.shell.view') || ''; } catch (e) {}
+    if (saved === 'all') return 'all';
+    for (var i = 0; i < instances.length; i++) if (instances[i].id === saved) return saved;
+    if (localUsable()) return 'local';
+    return instances.length > 1 ? instances[1].id : 'local';
+  }
+
+  function applyState(st, keepTab) {
+    state = st;
+    cloudMode = false;
+    $('cloudNote').hidden = true;
+    settingsFrame.hidden = false;
+    $('ver').textContent = 'v' + (st.version || '');
+    localReady = !!st.initialized;
+    instances = (st.instances && st.instances.length)
+      ? st.instances.slice()
+      : [{ id: 'local', kind: 'local', name: '本机', url: '' }];
+    chatReady = localReady || instances.length > 1;
+    $('tabChat').disabled = !chatReady;
+    $('tabMe').disabled = !chatReady;
+    $('tabAbout').disabled = !(localReady || chatReady);
+
+    if (!chatReady) view = 'local';
+    else if (view !== 'all') {
+      var found = false;
+      for (var i = 0; i < instances.length; i++) if (instances[i].id === view) found = true;
+      if (!found || (view === 'local' && !localUsable())) view = restoreView();
+    }
+
+    if (!chatReady) {
+      setStatus('等待初始化', 'warn');
+      // 从 tauri.localhost 带 ?auto=1 跳过来：让向导帧带上 auto=1，setup.html 自己开跑本机部署
+      // （成功路径没有 enterCloudMode 的 wizard 分支，这里补上，否则 auto 参数到不了 iframe）
+      if (autoBoot) paneMode = 'wizard';
+      loadSettings(false);
+      activate('manage');
+    } else {
+      pruneFrames();
+      // 刚建好账号时停在向导页抄 Key；平时启动直接进聊天；停在「关于」时原地刷新
+      var stay = (setupDone && !setupConsumed) ? 'manage'
+        : (keepTab && curTab !== 'chat') ? curTab : 'chat';
+      if (stay === 'chat' && !bootLanded) {
+        // 冷启动首屏落到「全部房间」列表，一个实例的 iframe 都不建；帧等用户
+        // 点进某个聊天页（switchView）再起。停在向导/管理页的那一次不算首屏：
+        // 首启建完账号还是直接进聊天，不让人多点一下才看见房间。
+        bootLanded = true;
+        view = 'all';
+      }
+      hydrateFromSnapshot();
+      renderAll();
+      setStatus(setupDone && !setupConsumed ? '初始化完成，可以进入聊天' : '本机服务运行中');
+      loadSettings(false);
+      activate(stay);
+      if (view === 'all') switchView('all', false);
+    }
+    booted = true;
+    overlay.hidden = true;
+  }
+
+  function ensureSecret(cb) {
+    var has = false;
+    try { has = !!localStorage.getItem('pubchat.shell.secret'); } catch (e) {}
+    if (has) { cb(); return; }
+    // 本机管理口上 /api/shell-claim 免设备凭证：先认领一次再读状态。
+    // 否则「本机服务在跑、state 却 401」会掉进「这台设备还没有管理凭证」的兜底页。
+    fetch('/api/shell-claim', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.secret) {
+          try {
+            localStorage.setItem('pubchat.shell.secret', j.secret);
+            localStorage.setItem('pubchat.device.secret', j.secret);
+          } catch (e) {}
+        }
+        cb();
+      })
+      .catch(function () { cb(); });
+  }
+
+  function fetchState(keepTab) {
+    return new Promise(function (resolve) {
+      ensureSecret(function () {
+        // 本机部署完成页会把桌面外壳的设备凭证写进 localStorage（/api/shell-claim），
+        // 之后每次读状态都带上它；没凭证（云端模式/未部署）就不带，走 bootFail → 云端模式。
+        var headers = {};
+        try {
+          var secret = localStorage.getItem('pubchat.shell.secret');
+          if (secret) headers['Authorization'] = 'Bearer ' + secret;
+        } catch (e) {}
+        fetch('/api/state', { cache: 'no-store', headers: headers })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function (st) { applyState(st, keepTab); resolve(); })
+          .catch(function (err) {
+            bootFail(err.message);
+            resolve();
+          });
+      });
+    });
+  }
+
+  function retry() {
+    $('spin').hidden = false;
+    $('retry').hidden = true;
+    $('bootMsg').textContent = '正在连接本机服务…';
+    boot();
+  }
+
+  function boot() {
+    fetchState(false);
+  }
+
+  /* ---------------- 事件 ---------------- */
+
+  $('tabChat').addEventListener('click', function () { activate('chat'); });
+  $('tabManage').addEventListener('click', function () {
+    paneMode = '';
+    activate('manage');
+    loadSettings(false);
+  });
+  $('tabMe').addEventListener('click', showMe);
+  $('tabAbout').addEventListener('click', function () { activate('about'); });
+  $('retry').addEventListener('click', retry);
+  $('btnCopyCloudAddr').addEventListener('click', copyCloudAddr);
+  $('btnRetryLocal').addEventListener('click', retryLocal);
+  $('railAll').addEventListener('click', function () { switchView('all', true); });
+  $('railAdd').addEventListener('click', openInstanceSettings);
+
+  function copyMini(text, btn) {
+    var old = btn.textContent;
+    var done = function (ok) {
+      btn.textContent = ok ? '已复制 ✓' : '复制失败';
+      setTimeout(function () { btn.textContent = old; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove(); done(true);
+      } catch (e) { done(false); }
+    }
+  }
+
+  // 部署完成弹窗：只显示聊天室主人的一个账号，带复制按钮；点「进入聊天室」直接到聊天
+  function showDone(cred) {
+    if (!cred || !cred.u) return;
+    $('doneUser').textContent = cred.u;
+    $('donePass').textContent = cred.k || '';
+    $('doneModal').hidden = false;
+  }
+
+  $('doneCopyUser').addEventListener('click', function () { copyMini($('doneUser').textContent, this); });
+  $('doneCopyPass').addEventListener('click', function () { copyMini($('donePass').textContent, this); });
+  $('doneGo').addEventListener('click', function () {
+    $('doneModal').hidden = true;
+    var c = pendingCreds['local'];
+    if (c) { c.first = true; activate('chat'); }
+    else fetchState(true).then(function () { activate('chat'); });
+  });
+  $('doneClose').addEventListener('click', function () { $('doneModal').hidden = true; });
+
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+
+    // 来自壳自己页面（设置/向导/实例页）的指令：必须同源
+    if (e.origin === location.origin) {
+      if (d.type === 'pubchat-setup-done') {
+        // 向导把新账号凭据带上来：聊天页是另一个端口（8765），localStorage 读不到 8766 写的，
+        // 只能靠聊天帧 URL 的 #u=&k= 自动登录一次。
+        if (d.cred && d.cred.u && d.cred.k) pendingCreds['local'] = { u: d.cred.u, k: d.cred.k };
+        markGuided();
+        clearAutoBoot();
+        setupDone = true;
+        setupConsumed = true;
+        paneMode = '';   // 管理页签回到正常管理界面（本机已有完整管理页），完成信息走弹窗
+        fetchState(true).then(function () {
+          showDone(d.cred);
+        });
+      } else if (d.type === 'pubchat-go-chat') {
+        if (d.cred && d.cred.u && d.cred.k) pendingCreds['local'] = { u: d.cred.u, k: d.cred.k };
+        markGuided();
+        clearAutoBoot();
+        setupDone = true;
+        paneMode = '';
+        fetchState(true).then(function () {
+          // 本机部署完成 → 直接进本机实例；聊天帧 URL 带 #u=&k=，聊天页自动登录
+          if (localUsable()) view = 'local';
+          activate('chat');
+        });
+      } else if (d.type === 'pubchat-open-setup') {
+        openSetup();
+      } else if (d.type === 'pubchat-about-ready') {
+        // 关于页自己起来要一次：状态可能比它早到，也可能比它晚到，两边都推一次最省事
+        pushNotices();
+      } else if (d.type === 'pubchat-mode-changed') {
+        fetchState(true).then(function () {
+          if (view === 'all') switchView('all', true); else activate('chat');
+        });
+      } else if (d.type === 'pubchat-join-remote' && d.instance && d.instance.id) {
+        markGuided();
+        // 邀请链接加入成功：凭据只留在壳内存里，交给对应远端 iframe 自动登录一次。
+        // 本机可能根本没建聊天室，但用户已经在聊天了，设置页应切成管理页。
+        setupDone = true;
+        setupConsumed = true;
+        paneMode = '';
+        if (d.cred && d.cred.u && d.cred.k) pendingCreds[d.instance.id] = { u: d.cred.u, k: d.cred.k };
+        fetchState(true).then(function () {
+          view = d.instance.id;
+          switchView(d.instance.id, true);
+          setStatus('已加入「' + (d.instance.name || instName(d.instance.id)) + '」');
+        });
+      } else if (d.type === 'pubchat-instances-changed') {
+        fetchState(true).then(function () {
+          if (view !== 'all') {
+            var ok = false;
+            for (var i = 0; i < instances.length; i++) if (instances[i].id === view) ok = true;
+            if (!ok) switchView(restoreView(), true);
+          } else {
+            switchView('all', true);
+          }
+        });
+      } else if (d.type === 'pubchat-open-instance' && d.id) {
+        var exists = false;
+        for (var k = 0; k < instances.length; k++) if (instances[k].id === d.id) exists = true;
+        if (exists) switchView(d.id, true);
+      }
+      return;
+    }
+
+    // 管理页里点「打开本机设置」：切回本机那份 settings.html（公网/设备/扫码/自启还在那儿）
+    if (d.type === 'pubchat-goto-settings') {
+      paneMode = 'settings';
+      activate('manage');
+      loadSettings(true);
+      return;
+    }
+
+    // 聊天页「我的 → 我的智能体」：管理归管理页，切过去（本机/云端都一样）
+    if (d.type === 'pubchat-goto-manage') {
+      paneMode = '';
+      activate('manage');
+      loadSettings(false);
+      return;
+    }
+
+    // 管理页里点「添加智能体」：切回聊天页，让它的加号弹窗打开（添加=原来那个弹窗）
+    if (d.type === 'pubchat-goto-add-agent') {
+      activate('chat');
+      var instAdd = activeInst() || instances[0];
+      if (instAdd) postToFrame(instAdd, { type: 'pubchat-open-add' });
+      return;
+    }
+
+    // 聊天页点「＋ → 邀请好友」：切到管理页签的「成员与邀请」
+    if (d.type === 'pubchat-open-invite') {
+      paneMode = '';
+      activate('manage');
+      loadSettings(false);
+      return;
+    }
+
+    // 来自各实例 iframe 的状态回报：按 window 引用认人，不信消息里自报的 id
+    var iid = iidForSource(e.source);
+    if (!iid) return;
+    if (d.type === 'pubchat-host-state') {
+      if (d.v !== 2 || (d.iid && d.iid !== iid)) return;
+      var prev = instData[iid] || {};
+      instData[iid] = {
+        name: (typeof d.name === 'string' && d.name) ? d.name : (prev.name || ''),
+        connected: !!d.connected,
+        active: d.active || '',
+        rooms: Array.isArray(d.rooms) ? d.rooms : [],
+        // 更新公告的历史存在实例自己的源上，「关于」页读不到，只能靠这条状态带上来
+        notices: Array.isArray(d.notices) ? d.notices : (prev.notices || []),
+        at: Date.now()
+      };
+      saveSnapshot(iid, instData[iid]);
+      // 实例自己报了名字（/api/instance），本地还是主机名这种默认名时顺手写回配置，
+      // 免得侧栏叫「阿泽的聊天室」、实例管理页却叫「127.0.0.1」。
+      var inst0 = null;
+      for (var k0 = 0; k0 < instances.length; k0++) if (instances[k0].id === iid) inst0 = instances[k0];
+      if (inst0 && inst0.kind !== 'local' && d.name && !adoptedNames[iid]) {
+        var cfgName = String(inst0.name || '');
+        var urlHost = '';
+        try { urlHost = new URL(inst0.url).hostname; } catch (e2) {}
+        if ((!cfgName || cfgName === urlHost || cfgName === '远端实例') && d.name !== cfgName) {
+          adoptedNames[iid] = 1;
+          inst0.name = String(d.name).slice(0, 30);
+          fetch('/api/instances', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', id: iid, name: inst0.name })
+          }).then(function () {
+            // 设置页可能正停在实例列表上，让它重读一次
+            try {
+              settingsFrame.contentWindow.postMessage({ type: 'pubchat-instances-refresh' }, location.origin);
+            } catch (e3) {}
+          }).catch(function () {});
+        }
+      }
+      if (pendingRoom[iid] && instData[iid].connected) {
+        var inst = null;
+        for (var j = 0; j < instances.length; j++) if (instances[j].id === iid) inst = instances[j];
+        if (inst) postToFrame(inst, { type: 'pubchat-open-room', v: 2, room: pendingRoom[iid] });
+        pendingRoom[iid] = '';
+      }
+      if (pendingMe[iid] && instData[iid].connected) {
+        pendingMe[iid] = false;
+        var mi = null;
+        for (var m0 = 0; m0 < instances.length; m0++) if (instances[m0].id === iid) mi = instances[m0];
+        if (mi) postToFrame(mi, { type: 'pubchat-host-me' });
+      }
+      if (view === 'all') {
+        renderAgg();
+        setStatus('全部实例 · ' + totalUnread() + ' 条未读');
+      }
+      renderRail();
+      return;
+    }
+    if (d.type === 'pubchat-room-opened' && d.ok) {
+      if (view === 'all') switchView(iid, true);
+    }
+  });
+
+  // 首启自动部署：壳带 ?auto=1 跳过来时，向导帧一加载就直接开跑本机部署。
+  // 不依赖 loadSettings 的 query 比较（旧版只比路径会把 auto=1 吞掉），onload 更可靠。
+  settingsFrame.addEventListener('load', function () {
+    if (!autoBoot) return;
+    var w = settingsFrame.contentWindow;
+    if (w && typeof w.runLocalDeploy === 'function') {
+      clearAutoBoot();
+      try { w.runLocalDeploy(); } catch (e) {}
+    }
+  });
+
+  boot();
+})();
+</script>
+
+<script>
+/* 与「我」有关的消息提醒（2026-11-15）
+   聊天帧在另一个端口/域名，它把「有人找你」这件事用 postMessage 抛上来，
+   这里负责弹气泡，并让 Rust 侧去系统通知 / 把藏在托盘里的窗口叫回来。
+   （窗口收进托盘、托盘菜单、彻底退出 都在 Rust 侧，不经过这个脚本。） */
+(function () {
+  var T = window.__TAURI_INTERNALS__;
+  var pop = document.getElementById('notifyPop');
+  var popTimer = null;
+
+  function invoke(cmd, args) {
+    if (!T || !T.invoke) return Promise.resolve(null);
+    try { return T.invoke(cmd, args || {}).catch(function () { return null; }); }
+    catch (e) { return Promise.resolve(null); }
+  }
+
+  function hidePop() {
+    pop.hidden = true;
+    if (popTimer) { clearTimeout(popTimer); popTimer = null; }
+  }
+
+  function showPop(d) {
+    document.getElementById('notifyHead').textContent = d.title || '有新消息';
+    document.getElementById('notifyBody').textContent = d.body || '';
+    pop.hidden = false;
+    if (popTimer) clearTimeout(popTimer);
+    popTimer = setTimeout(hidePop, 9000);
+    invoke('notify_msg', { title: d.title || 'PubChat 有新消息', body: d.body || '' });
+  }
+
+  document.getElementById('notifyClose').addEventListener('click', function (e) {
+    e.stopPropagation();
+    hidePop();
+  });
+  pop.addEventListener('click', function () {
+    hidePop();
+    // 壳只负责把人带回聊天页签，具体哪个房间由聊天页自己的未读标记指路
+    var tab = document.getElementById('tabChat');
+    if (tab && !tab.disabled) tab.click();
+  });
+
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.type === 'pubchat-notify') showPop(d);
+  });
+})();
+</script>
+</body>
+</html>

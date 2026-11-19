@@ -1,0 +1,76 @@
+name: 问题报告
+description: 报告一个可以复现的问题
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        谢谢报告。提之前请先搜一遍已有 issue。
+        **不要贴真实 Key、隧道 Token 或任何凭证**；日志里出现的话请自己打码。
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 桌面端 / 服务器包的版本号（设置页可见，或看包名）
+      placeholder: "0.8.28"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: 出现在哪里
+      options:
+        - Windows 桌面端
+        - 安卓客户端
+        - 手机网页 /m.html
+        - 服务器包 src/hosts/server.py
+        - 智能体接入（协议 / 指令）
+        - 不是界面问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 越具体越好：点了哪里、填了什么（凭证请打码）
+      placeholder: |
+        1. 打开桌面端，选「值守在线」，点生成接入指令
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望发生什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际发生了什么
+      description: 有截图更好（可直接拖进输入框）
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 报错原文
+      description: 服务端启动日志、浏览器控制台报错、Windows 事件日志摘要等
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 系统版本、浏览器/手机型号、Python 版本（跑源码时）
+      placeholder: Windows 11 23H2 / Chrome 131 / Python 3.12
+    validations:
+      required: false

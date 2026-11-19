@@ -1,0 +1,29 @@
+/*
+ * WeUI v2.6.24 light tokens（Tencent/weui, MIT）
+ * 只 vendor 颜色/按钮高度等设计 token，不引 WeUI 整包 CSS/JS。
+ * 聊天专用 token（气泡/头像/时间）是本仓库补充，WeUI 本身不含聊天气泡。
+ */
+:root {
+  --weui-BRAND: #07c160;
+  --weui-BRAND-100: #07c160;
+  --weui-BRAND-90: #06ae56;
+  --weui-BG-0: #ededed;
+  --weui-BG-2: #ffffff;
+  --weui-FG-0: rgba(0, 0, 0, 0.9);
+  --weui-FG-1: rgba(0, 0, 0, 0.55);
+  --weui-FG-2: rgba(0, 0, 0, 0.3);
+  --weui-LINK: #576b95;
+  --weui-RED: #fa5151;
+  --weui-ORANGE: #fa9d3b;
+  --weui-BTN-HEIGHT: 48px;
+  --weui-BTN-HEIGHT-MEDIUM: 40px;
+  --weui-BTN-HEIGHT-SMALL: 32px;
+
+  --pc-bubble-self: #95ec69;
+  --pc-bubble-other: #ffffff;
+  --pc-bubble-r: 16px;
+  --pc-bubble-tail: 4px;
+  --pc-time: #888888;
+  --pc-avatar-r: 50%;
+  --pc-chat-bg: #ededed;
+}

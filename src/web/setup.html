@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PubChat · 初始化</title>
+<style>
+  :root{--ink:#1d2129;--muted:#86909c;--line:#e5e6eb;--bg:#f5f6f8;--brand:#2f6bff;--ok:#00a35c;--warn:#d97706}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:600px;margin:0 auto;padding:48px 20px}
+  h1{font-size:26px;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 22px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 10px 30px rgba(20,30,60,.05)}
+  .card + .card{margin-top:16px}
+  h2{font-size:18px;margin:0 0 10px}
+  label{display:block;font-size:13px;color:#4e5969;margin:14px 0 6px}
+  input[type=text],input[type=password],input[type=url]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;outline:none}
+  input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,107,255,.12)}
+  button{margin-top:16px;width:100%;padding:12px;border:0;border-radius:9px;background:var(--brand);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  button.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  button.secondary:hover{border-color:var(--brand);color:var(--brand)}
+  .err{color:#d93026;font-size:13px;min-height:20px;margin-top:8px}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .step{display:none}
+  .step.active{display:block}
+  .kv{margin:8px 0;padding:9px 11px;background:#f7f8fa;border-radius:9px;font-family:ui-monospace,Consolas,monospace;font-size:13px;word-break:break-all}
+  .kv b{font-family:inherit;color:#4e5969;font-weight:600}
+  .cred-line{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cred-line code{font-family:ui-monospace,Consolas,monospace}
+  .copy-mini{margin:0;padding:2px 9px;font-size:12px;border:1px solid #c9d2e3;border-radius:6px;background:#fff;color:#2454c7;cursor:pointer;flex:0 0 auto}
+  .copy-mini:hover{background:#eef3ff;border-color:#2454c7}
+  .foot{color:var(--muted);font-size:12px;margin-top:18px;text-align:center}
+  .impbox{border-style:dashed;margin-top:16px}
+  .impbox h2{font-size:15px;margin:0 0 6px}
+  .filebtn{display:inline-block;margin-top:6px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;color:#4e5969}
+  .filebtn:hover{border-color:var(--brand);color:var(--brand)}
+  .mode-btns{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .mode-btn{padding:16px;border:2px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;transition:all .15s}
+  .mode-btn:hover{border-color:var(--brand);background:#f8faff}
+  .mode-btn h3{margin:0 0 4px;font-size:16px}
+  .mode-btn p{margin:0;font-size:13px;color:var(--muted)}
+  .mode-btn .tagline{display:inline-block;font-size:11px;padding:1px 8px;border-radius:99px;background:#e8f0ff;color:var(--brand);margin-left:6px;vertical-align:1px}
+  ul.progress{list-style:none;margin:14px 0 4px;padding:0}
+  ul.progress li{position:relative;padding:7px 0 7px 30px;color:var(--muted);font-size:14px}
+  ul.progress li::before{content:"○";position:absolute;left:2px;color:#c0c4cc}
+  ul.progress li.doing{color:var(--ink)}
+  ul.progress li.doing::before{content:"◔";color:var(--brand);animation:spin 1s linear infinite}
+  ul.progress li.done{color:var(--ok)}
+  ul.progress li.done::before{content:"●";color:var(--ok)}
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  .cmdbox{margin:10px 0 0;padding:12px 14px;background:#1f2430;color:#d8e1f0;border-radius:10px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+  .claimframe{position:fixed;inset:0;background:rgba(15,20,35,.55);display:none;z-index:50;padding:24px}
+  .claimframe.on{display:flex;align-items:center;justify-content:center}
+  .claimframe .box{background:#fff;border-radius:14px;width:min(1000px,100%);height:min(86vh,800px);display:flex;flex-direction:column;overflow:hidden}
+  .claimframe .bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .claimframe iframe{flex:1;border:0;width:100%;background:#fff}
+  .claimframe button{width:auto;margin:0;padding:7px 14px}
+  .okline{color:var(--ok);font-size:13px;margin-top:8px}
+  .failline{color:#d93026;font-size:13px;margin-top:8px}
+  html.embed body .wrap{padding-top:26px}
+  .row{display:flex;gap:10px}
+  .row > *{flex:1;min-width:0}
+  .row button{margin-top:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PubChat</h1>
+  <p class="sub" id="stepSub">第一次启动，选一个部署方式</p>
+
+  <!-- Step 0：三个大选项 -->
+  <div class="step active" id="step0">
+    <div class="card">
+      <h2>选择部署方式</h2>
+      <div class="mode-btns">
+        <div class="mode-btn" data-go="Local" role="button" tabindex="0">
+          <h3>① 本机部署 <span class="tagline">推荐</span></h3>
+          <p>在这台电脑上直接跑聊天室，自动开始，同 Wi‑Fi 下手机扫码就能进。</p>
+        </div>
+        <div class="mode-btn" data-go="Cloud" role="button" tabindex="0">
+          <h3>② 云端服务器部署</h3>
+          <p>在服务器（默认 Unix）上跑聊天室，用服务器给出的认领链接连回来。</p>
+        </div>
+        <div class="mode-btn" data-go="Join" role="button" tabindex="0">
+          <h3>③ 加入他人聊天室</h3>
+          <p>朋友发来邀请链接，粘贴进来就能进他的聊天室。</p>
+        </div>
+        <div class="mode-btn" data-go="Login" role="button" tabindex="0">
+          <h3>④ 我已有账号 <span class="tagline">重装/换机用这个</span></h3>
+          <p>之前用过、账号还在（比如 pub2 云端大厅）？直接去登录，不用再部署一遍。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card impbox">
+      <h2>已有数据库？（可选）</h2>
+      <p class="hint" style="margin:0">换电脑或重装时，把原来数据目录里的 <code>pubchat.db</code> 导进来，账号和聊天记录一起接管。</p>
+      <label class="filebtn">选择 pubchat.db<input id="dbFile" type="file" accept=".db,.sqlite,.sqlite3" hidden></label>
+      <div class="err" id="impErr"></div>
+    </div>
+  </div>
+
+  <!-- Step Local：本机部署，自动开始 + 实时进度 -->
+  <div class="step" id="stepLocal">
+    <div class="card">
+      <h2>本机部署中</h2>
+      <p class="sub" style="margin:0 0 4px">正在这台电脑上初始化聊天室，几秒就好…</p>
+      <ul class="progress" id="localProgress">
+        <li data-k="1">启动本机服务</li>
+        <li data-k="2">初始化数据库</li>
+        <li data-k="3">创建管理员账号</li>
+        <li data-k="4">完成</li>
+      </ul>
+      <div class="err" id="errLocal"></div>
+      <div id="localDone" hidden>
+        <div class="okline">部署完成 ✅ 下面是自动生成的账号，只显示这一次，请复制保存。</div>
+        <div id="localCred"></div>
+        <button id="goLocal" type="button">进入聊天室</button>
+      </div>
+    </div>
+    <div class="card" id="localFail" hidden>
+      <h2>部署失败</h2>
+      <div class="err" id="errLocal2"></div>
+      <button id="localBack" type="button" class="secondary">← 返回重选</button>
+    </div>
+  </div>
+
+  <!-- Step Cloud：云端服务器部署 -->
+  <div class="step" id="stepCloud">
+    <div class="card">
+      <h2>① 在服务器上启动</h2>
+      <p class="sub" style="margin:0">服务器包默认给 Unix（Linux / macOS）用。把下面命令贴到服务器终端执行：</p>
+      <div class="cmdbox" id="cloudCmd">curl -LO https://github.com/imginez/pubchat/releases/latest/download/PubChat_server.tar.gz
+mkdir -p pubchat-server &amp;&amp; tar -xzf PubChat_server.tar.gz -C pubchat-server --strip-components=1
+cd pubchat-server
+pip install websockets
+python src/hosts/server.py --port 8865</div>
+      <div class="row" style="margin-top:12px">
+        <button id="btnCopyCmd" type="button" class="secondary">复制命令</button>
+        <button id="btnCopyUrl" type="button" class="secondary">复制下载链接</button>
+      </div>
+      <p class="hint" style="margin-top:10px">启动后会先问「服务器已有公网地址」：填你的反代域名（如 https://chat.example.com）并确认，终端就会打印一条<b>认领链接</b>——永久有效、只能用一次。</p>
+      <p class="hint">反代要把 /api/ 和 /claim 指到管理口（默认 8866），其余页面与 /ws 指到对外口。</p>
+    </div>
+
+    <div class="card">
+      <h2>② 填认领链接</h2>
+      <label for="claimUrl">认领链接（服务器终端打印的那条）</label>
+      <input id="claimUrl" type="url" placeholder="https://chat.example.com/claim#b=...">
+      <button id="btnTestClaim" type="button" class="secondary">测试连接</button>
+      <div id="claimResult" style="display:none"></div>
+      <button id="btnOpenClaim" type="button" disabled>打开认领页并认领</button>
+      <p class="hint">认领页打开后按提示输入服务器终端显示的 6 位码，完成认领后就能以管理员身份进入。</p>
+    </div>
+  </div>
+
+  <!-- Step Login：已有账号——先问是本地部署还是服务器部署 -->
+  <div class="step" id="stepLogin">
+    <div class="card">
+      <h2>你的账号在哪台聊天室上？</h2>
+      <p class="sub" style="margin:0 0 12px">重装或换机后不用重新部署，选一下原来那台的类型就行。</p>
+      <div class="mode-btn" id="loginPickLocal" role="button" tabindex="0">
+        <div class="mode-t">① 这台电脑上（本地部署）</div>
+        <div class="mode-d">账号就在本机数据目录里，直接进本机实例登录。</div>
+      </div>
+      <div class="mode-btn" id="loginPickRemote" role="button" tabindex="0">
+        <div class="mode-t">② 我自己的服务器（云端部署）</div>
+        <div class="mode-d">需要填服务器的公网地址，先测连接再登录。</div>
+      </div>
+    </div>
+
+    <div class="card" id="loginRemoteCard" hidden>
+      <h2>连到我的服务器</h2>
+      <label for="loginInstUrl">服务器公网地址</label>
+      <input id="loginInstUrl" type="url" placeholder="https://chat.example.com">
+      <div class="row" style="margin-top:10px">
+        <button id="btnTestInst" type="button" class="secondary">测试连接</button>
+        <button id="btnUseInst" type="button" disabled>用这个地址登录</button>
+      </div>
+      <div id="instResult" style="margin-top:10px"></div>
+      <p class="hint">连接成功后会打开这台服务器自己的登录页，用你的用户名 + 一级 Key 登录。</p>
+      <p class="hint"><a href="#" id="loginBack">返回上一步</a></p>
+    </div>
+  </div>
+
+  <!-- Step Join：加入他人聊天室 -->
+  <div class="step" id="stepJoin">
+    <div class="card">
+      <h2>加入他人聊天室</h2>
+      <label for="invLink">邀请链接</label>
+      <input id="invLink" type="url" placeholder="https://.../join.html#t=...">
+      <div class="hint">把朋友发来的邀请链接整段粘进来（一次性的，用完即失效）。</div>
+      <button id="invJoinBtn" type="button">加入</button>
+      <div class="err" id="invErr"></div>
+    </div>
+    <div class="card" id="joinDone" hidden>
+      <div class="okline" id="joinDoneText"></div>
+      <div id="joinCred"></div>
+      <button id="goJoin" type="button">进入聊天</button>
+    </div>
+  </div>
+
+  <!-- Step Done：通用完成页（导入数据库后等） -->
+  <div class="step" id="stepDone">
+    <div class="card">
+      <h2 style="margin:0 0 4px;font-size:19px">完成</h2>
+      <p class="sub" style="margin:0 0 8px" id="doneSub"></p>
+      <div id="result"></div>
+      <button id="go" type="button">进入聊天</button>
+    </div>
+  </div>
+
+  <p class="foot">管理页只在本机（127.0.0.1）可打开，对外端口只提供聊天室。</p>
+</div>
+
+<div class="claimframe" id="claimFrame">
+  <div class="box">
+    <div class="bar">
+      <strong>认领服务器（管理员）</strong>
+      <button id="btnCloseClaim" type="button" class="secondary">关闭</button>
+    </div>
+    <iframe id="claimIframe" title="认领页"></iframe>
+  </div>
+</div>
+
+<div class="claimframe" id="joinFrame">
+  <div class="box">
+    <div class="bar">
+      <strong>加入聊天室</strong>
+      <button id="btnCloseJoin" type="button" class="secondary">关闭</button>
+    </div>
+    <iframe id="joinIframe" title="加入页"></iframe>
+  </div>
+</div>
+
+<script src="invite.js"></script>
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return document.querySelectorAll(s); };
+  var embedded = window.parent && window.parent !== window;
+  // 本机部署成功后拿到的账号凭据：随 pubchat-setup-done / pubchat-go-chat 交给壳，
+  // 壳把它放进聊天帧 URL 的 #u=&k=，聊天页据此自动登录（localStorage 分源，8766 写不进 8765）。
+  var curCred = null;
+  var current = 'step0';
+
+  function notify(type, extra){
+    if (!embedded) return;
+    var msg = { type: type };
+    if (extra) for (var k in extra) msg[k] = extra[k];
+    try { window.parent.postMessage(msg, location.origin); } catch (e) {}
+  }
+
+  function showStep(id){
+    $$('.step').forEach(function(el){ el.classList.remove('active'); });
+    var el = $('#step' + id.charAt(0).toUpperCase() + id.slice(1));
+    if (el) el.classList.add('active');
+    current = 'step' + id;
+  }
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  // 下载链接：GitHub Releases 固定地址，永远指向最新版本（二进制不进仓库）
+  var SERVER_BASE = 'https://github.com/imginez/pubchat/releases/latest/download/';
+  var SERVER_TAR = 'PubChat_server.tar.gz';
+  var SERVER_DIR = 'pubchat-server';
+  var cmd = 'curl -LO ' + SERVER_BASE + SERVER_TAR + '\n' +
+            'mkdir -p ' + SERVER_DIR + ' && tar -xzf ' + SERVER_TAR + ' -C ' + SERVER_DIR + ' --strip-components=1\n' +
+            'cd ' + SERVER_DIR + '\n' +
+            'pip install websockets\n' +
+            'python src/hosts/server.py --port 8865';
+  $('#cloudCmd').textContent = cmd;
+
+  function copyText(text){
+    if (navigator.clipboard) {
+      return navigator.clipboard.writeText(text).then(function(){ return true; }, function(){ return false; });
+    }
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return Promise.resolve(ok);
+  }
+
+  function hideAll(){
+    $$('.step').forEach(function(el){ el.classList.remove('active'); });
+  }
+
+  /* ---------------- Step 0：三个选项 ---------------- */
+  $$('.mode-btn').forEach(function(btn){
+    function go(){
+      // 选过任一部署方式就认为引导完成（下次打开直接进，不再弹三选项）
+      try { localStorage.setItem('pubchat.shell.guided', '1'); } catch (e) {}
+      var mode = btn.dataset.go;
+      if (mode === 'Local') startLocal();
+      else if (mode === 'Cloud') showStep('Cloud');
+      else if (mode === 'Login') showStep('Login');   // 已有账号：先问清是本机还是服务器
+      else showStep('Join');
+    }
+    btn.addEventListener('click', go);
+    btn.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+    });
+  });
+
+  // 「我已有账号」：引导标记已在上面置位，让壳重新加载一次就会直接进默认云端实例
+  // （那边会给登录框：用户名 + 一级 Key）。重装/换机的人不用再走一遍部署。
+  function backToShell(){
+    try {
+      if (window.parent && window.parent !== window) { window.parent.location.reload(); return; }
+    } catch (e) {}
+    location.href = '/';
+  }
+
+
+  /* ---------------- Login：已有账号，先问「本机 / 服务器」，服务器要测连通 ---------------- */
+  (function initLoginFlow(){
+    var LS_INST = 'pubchat.shell.inst';
+    var pickLocal = $('#loginPickLocal');
+    var pickRemote = $('#loginPickRemote');
+    var remoteCard = $('#loginRemoteCard');
+    var urlInput = $('#loginInstUrl');
+    var testBtn = $('#btnTestInst');
+    var useBtn = $('#btnUseInst');
+    var out = $('#instResult');
+    var tested = '';
+
+    function norm(u){
+      u = String(u || '').trim().replace(/\/+$/, '');
+      if (!u) return '';
+      if (!/^https?:\/\//i.test(u)) {
+        u = (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(u) ? 'http://' : 'https://') + u;
+      }
+      return u;
+    }
+
+    if (pickLocal) pickLocal.addEventListener('click', function(){
+      // 本机部署：清掉之前记下的服务器地址，回壳走本机实例
+      try { localStorage.removeItem(LS_INST); } catch (e) {}
+      backToShell();
+    });
+
+    if (pickRemote) pickRemote.addEventListener('click', function(){
+      remoteCard.hidden = false;
+      if (urlInput) urlInput.focus();
+    });
+
+    if (testBtn) testBtn.addEventListener('click', function(){
+      var u = norm(urlInput.value);
+      out.textContent = '';
+      useBtn.disabled = true;
+      tested = '';
+      if (!u) { out.innerHTML = '<span class="err">先填服务器地址（如 https://chat.example.com）</span>'; return; }
+      out.textContent = '正在连接 ' + u + ' …';
+      testBtn.disabled = true;
+      // 服务器没开 CORS，只能做「可达性」探测：no-cors 至少能确认域名解析 + HTTP 通
+      var done = false;
+      var timer = setTimeout(function(){
+        if (done) return;
+        done = true;
+        testBtn.disabled = false;
+        out.innerHTML = '<span class="err">连接超时：检查地址、端口与反代是否放行了 / 页面</span>';
+      }, 8000);
+      fetch(u + '/', { mode: 'no-cors', cache: 'no-store' })
+        .then(function(){
+          if (done) return;
+          done = true; clearTimeout(timer);
+          testBtn.disabled = false;
+          tested = u;
+          useBtn.disabled = false;
+          out.innerHTML = '<span class="okline">连接成功：' + esc(u) + '，点「用这个地址登录」继续</span>';
+        })
+        .catch(function(err){
+          if (done) return;
+          done = true; clearTimeout(timer);
+          testBtn.disabled = false;
+          out.innerHTML = '<span class="err">连不上：' + esc(err && err.message ? err.message : String(err)) +
+            '（确认地址可公网访问、https 证书有效）</span>';
+        });
+    });
+
+    if (useBtn) useBtn.addEventListener('click', function(){
+      if (!tested) return;
+      try { localStorage.setItem(LS_INST, tested); } catch (e) {}
+      backToShell();
+    });
+
+    var back = $('#loginBack');
+    if (back) back.addEventListener('click', function(e){ e.preventDefault(); showStep('0'); });
+
+    if (urlInput) urlInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') { e.preventDefault(); if (testBtn) testBtn.click(); }
+    });
+  })();
+
+  ['#localBack'].forEach(function(s){
+    var el = $(s); if (el) el.addEventListener('click', function(e){ e.preventDefault(); showStep('0'); });
+  });
+
+  /* ---------------- Local：自动部署 + 进度 ---------------- */
+  function mark(k, cls){
+    var li = $('#localProgress li[data-k="' + k + '"]');
+    if (li) { li.classList.remove('doing', 'done'); if (cls) li.classList.add(cls); }
+  }
+
+  function startLocal(){
+    // 桌面壳（tauri.localhost）跨源拿不到本机管理 API：先让壳启动本机服务，
+    // 再让整个窗口切到「本机服务自己的外壳」（127.0.0.1:管理口），那边同源。
+    var tauri = window.__TAURI_INTERNALS__;
+    var isLocalOrigin = (location.hostname === '127.0.0.1' || location.hostname === 'localhost');
+    if (!isLocalOrigin && tauri && tauri.invoke) {
+      showStep('Local');
+      $('#localDone').hidden = true;
+      $('#localFail').hidden = true;
+      $('#errLocal').textContent = '';
+      mark(1, 'doing');
+      tauri.invoke('start_local_backend').then(function(port){
+        // 带 auto=1 跳到本机外壳：壳会把向导帧的 setup.html 也带上 auto，
+        // 自动部署一次，用户不用再点第二次「本机部署」。
+        var url = 'http://127.0.0.1:' + port + '/shell.html?auto=1';
+        return tauri.invoke('open_app_url', { url: url });
+      }).catch(function(err){
+        mark(1, '');
+        $('#errLocal2').textContent = '启动本机服务失败：' +
+          (err && err.message ? err.message : String(err));
+        $('#localFail').hidden = false;
+      });
+      return;
+    }
+    runLocalDeploy();
+  }
+
+  function runLocalDeploy(){
+    showStep('Local');
+    $('#localDone').hidden = true;
+    $('#localFail').hidden = true;
+    $('#errLocal').textContent = '';
+    mark(1, 'doing');
+    setTimeout(function(){ mark(1, 'done'); mark(2, 'doing'); }, 400);
+    setTimeout(function(){ mark(2, 'done'); mark(3, 'doing'); }, 900);
+
+    fetch('/api/setup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ auto: true, name: '聊天室主人' })
+    })
+    .then(function(r){ return r.json().then(function(j){ return {ok: r.ok, j: j}; }); })
+    .then(function(res){
+      if (!res.ok) throw new Error(res.j.error || '初始化失败');
+      mark(3, 'done'); mark(4, 'done');
+      try { history.replaceState(null, '', '/setup.html?embed=1&chat=1'); } catch (e) {}
+      var u = res.j.user;
+      curCred = { u: u.client_id, k: u.key1 };
+      // 只展示聊天室主人自己的账号（不生成、也不列智能体），每个凭据带醒目复制按钮
+      var html = '';
+      html += '<div class="kv"><b>登录名</b><br><span class="cred-line"><code id="credUser">' + esc(u.client_id) +
+              '</code><button type="button" class="copy-mini" data-copy="' + esc(u.client_id) + '">复制</button></span></div>';
+      html += '<div class="kv"><b>密码（自动生成，请尽快改掉）</b><br><span class="cred-line"><code id="credPass">' + esc(u.key1) +
+              '</code><button type="button" class="copy-mini" data-copy="' + esc(u.key1) + '">复制</button></span></div>';
+      $('#localCred').innerHTML = html;
+      $$('#localCred .copy-mini').forEach(function(b){
+        b.addEventListener('click', function(){
+          copyText(b.getAttribute('data-copy')).then(function(ok){
+            b.textContent = ok ? '已复制 ✓' : '复制失败';
+            setTimeout(function(){ b.textContent = '复制'; }, 1200);
+          });
+        });
+      });
+      $('#localDone').hidden = false;
+      $('#errLocal').textContent = '';
+      // 自动登录：聊天页（同源）读这两个 key 直接进；壳拿 shell-claim 的设备凭证读 /api/state
+      try {
+        localStorage.setItem('pubchat.user', u.client_id);
+        localStorage.setItem('pubchat.key', u.key1);
+      } catch (e) {}
+      fetch('/api/shell-claim', { method: 'POST' })
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if (j && j.secret) {
+            try {
+              localStorage.setItem('pubchat.shell.secret', j.secret);
+              // device.js 用这个 key 给同源 /api/* 请求补 Authorization，两个都写才不漏
+              localStorage.setItem('pubchat.device.secret', j.secret);
+            } catch (e) {}
+          }
+        })
+        .catch(function(){});
+      notify('pubchat-setup-done', { cred: curCred });
+    })
+    .catch(function(err){
+      $('#errLocal2').textContent = err.message;
+      $('#localFail').hidden = false;
+      $('#localDone').hidden = true;
+      mark(3, '');
+      mark(4, '');
+    });
+  }
+
+  $('#goLocal').addEventListener('click', function(){
+    notify('pubchat-go-chat', { cred: curCred });
+  });
+
+  /* ---------------- Cloud：下载指引 + 认领 ---------------- */
+  $('#btnCopyCmd').addEventListener('click', function(){
+    copyText(cmd).then(function(ok){
+      this.textContent = ok ? '已复制 ✓' : '复制失败，请手动选';
+    }.bind(this));
+  });
+  $('#btnCopyUrl').addEventListener('click', function(){
+    copyText(SERVER_BASE + SERVER_TAR).then(function(ok){
+      this.textContent = ok ? '已复制 ✓' : '复制失败，请手动选';
+    }.bind(this));
+  });
+
+  // 测试连接：隐藏 iframe 加载认领页，能 load 就算连通
+  function testClaim(url, cb){
+    var fr = document.createElement('iframe');
+    var done = false;
+    fr.style.cssText = 'position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;left:-9999px';
+    var timer = setTimeout(function(){ finish(false); }, 6000);
+    function finish(ok){
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      try { fr.remove(); } catch (e) {}
+      cb(ok);
+    }
+    fr.onload = function(){ finish(true); };
+    fr.onerror = function(){ finish(false); };
+    fr.src = url;
+    document.body.appendChild(fr);
+  }
+
+  var claimUrl = '';
+  $('#claimUrl').addEventListener('input', function(){
+    claimUrl = this.value.trim();
+    $('#btnOpenClaim').disabled = true;
+    $('#claimResult').style.display = 'none';
+  });
+
+  $('#btnTestClaim').addEventListener('click', function(){
+    var url = $('#claimUrl').value.trim();
+    if (!url) return;
+    var el = $('#claimResult');
+    el.style.display = 'block';
+    el.className = 'hint';
+    el.textContent = '正在测试连接…';
+    $('#btnTestClaim').disabled = true;
+    testClaim(url, function(ok){
+      $('#btnTestClaim').disabled = false;
+      if (ok) {
+        el.className = 'okline';
+        el.textContent = '✅ 连接成功，服务器可达';
+        $('#btnOpenClaim').disabled = false;
+        claimUrl = url;
+      } else {
+        el.className = 'failline';
+        el.textContent = '❌ 连不上：链接不对、服务器没启动，或反代没配好';
+        $('#btnOpenClaim').disabled = true;
+      }
+    });
+  });
+
+  $('#btnOpenClaim').addEventListener('click', function(){
+    if (!claimUrl) return;
+    var fr = $('#claimIframe');
+    fr.src = claimUrl;
+    $('#claimFrame').classList.add('on');
+  });
+  $('#btnCloseClaim').addEventListener('click', function(){
+    $('#claimFrame').classList.remove('on');
+    $('#claimIframe').src = 'about:blank';
+  });
+
+  /* ---------------- Join：只填邀请链接 ---------------- */
+  function openJoinFrame(url){
+    $('#joinIframe').src = url;
+    $('#joinFrame').classList.add('on');
+  }
+  $('#btnCloseJoin').addEventListener('click', function(){
+    $('#joinFrame').classList.remove('on');
+    $('#joinIframe').src = 'about:blank';
+  });
+
+  $('#invJoinBtn').addEventListener('click', function(){
+    var link = $('#invLink').value.trim();
+    if (!link) { $('#invErr').textContent = '请先粘贴邀请链接'; return; }
+    var btn = $('#invJoinBtn');
+    $('#invErr').textContent = '';
+    btn.disabled = true;
+    // 桌面壳（tauri.localhost）里没有本机服务，/api/instances 登记不了实例：
+    // 直接把邀请链接对应的 join 页打开在弹层里，用户填个名字就进。
+    if (/tauri\.localhost/.test(location.hostname)) {
+      openJoinFrame(link);
+      btn.disabled = false;
+      return;
+    }
+    // 名字/登录名不让人填：自动生成，保证「只填链接」就能进
+    var guestName = '新成员';
+    var guestCid = 'guest_' + Math.random().toString(36).slice(2, 8);
+    window.PubChatInvite.join({
+      link: link,
+      name: guestName,
+      clientId: guestCid,
+      onStage: function(){},
+      onDone: function(info){
+        btn.disabled = false;
+        $('#stepJoin').classList.remove('active');
+        showStep('Join');
+        var box = $('#joinDone');
+        box.hidden = false;
+        if (info.pending) {
+          $('#joinDoneText').textContent = '已提交，等待房主批准。批准后用登录名 + Key 登录。';
+          $('#joinCred').innerHTML = '<div class="kv"><b>登录名</b><br>' + esc(info.client_id) + '</div>';
+        } else {
+          $('#joinDoneText').textContent = '已加入「' + esc(info.instance.name || info.instance.url) + '」';
+          $('#joinCred').innerHTML =
+            '<div class="kv"><b>登录名</b><br>' + esc(info.client_id) + '</div>' +
+            '<div class="kv"><b>一级 Key（登录密码）</b><br>' + esc(info.key1) + '</div>';
+          notify('pubchat-join-remote', {
+            instance: info.instance,
+            cred: { u: info.client_id, k: info.key1 }
+          });
+        }
+        notify('pubchat-instances-changed');
+      },
+      onFail: function(err){
+        btn.disabled = false;
+        $('#invErr').textContent = err.message;
+      }
+    });
+  });
+
+  $('#goJoin').addEventListener('click', function(){
+    notify('pubchat-go-chat');
+  });
+
+  /* ---------------- 数据库导入 ---------------- */
+  $('#dbFile').addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var errEl = $('#impErr');
+    if (f.size > 200 * 1024 * 1024) { errEl.textContent = '文件超过 200MB'; return; }
+    errEl.textContent = '正在导入…';
+    fetch('/api/import', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/octet-stream'},
+      body: f
+    })
+    .then(function(r){ return r.json().then(function(j){ return {ok: r.ok, j: j}; }); })
+    .then(function(res){
+      if (!res.ok) throw new Error(res.j.error || '导入失败');
+      errEl.textContent = '';
+      var html = '<div class="kv"><b>用户数</b><br>' + esc(res.j.users) + '</div>';
+      if (res.j.backup) html += '<div class="kv"><b>旧库备份</b><br>' + esc(res.j.backup) + '</div>';
+      $('#result').innerHTML = html;
+      $('#doneSub').textContent = '旧库已经接管，用原来的一级 Key 登录即可。';
+      showStep('Done');
+      notify('pubchat-setup-done');
+    })
+    .catch(function(err){ errEl.textContent = err.message; $('#dbFile').value = ''; });
+  });
+
+  /* ---------------- 完成页 ---------------- */
+  $('#go').addEventListener('click', function(){
+    if (embedded) notify('pubchat-go-chat');
+    else location.href = '/';
+  });
+
+  // 桌面壳切到本机外壳后会带 auto=1：自动开始本机部署
+  if (/[?&]auto=1/.test(location.search)) runLocalDeploy();
+})();
+</script>
+</body>
+</html>

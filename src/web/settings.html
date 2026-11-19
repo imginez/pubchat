@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PubChat · 管理</title>
+<style>
+  :root{--ink:#1d2129;--muted:#86909c;--line:#e5e6eb;--bg:#f5f6f8;--brand:#2f6bff;--ok:#00a870}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  .subtabs{flex:none;display:flex;flex-wrap:wrap;gap:2px;padding:10px 16px 0;background:#fff;border-bottom:1px solid var(--line)}
+  .subtab{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:500;padding:8px 14px;border-radius:8px 8px 0 0;cursor:pointer;outline:none;position:relative;bottom:-1px;white-space:nowrap}
+  .subtab:hover{color:var(--ink)}
+  .subtab.active{color:var(--brand);border:1px solid var(--line);border-bottom-color:#fff;background:#fff}
+  .subtab .opt{color:var(--muted);font-weight:400}
+  main{flex:1;min-height:0;position:relative}
+  .panel{position:absolute;inset:0;border:0;width:100%;height:100%;background:var(--bg)}
+  .tip{flex:none;padding:7px 16px;background:#fff;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}
+  .backbar{flex:none;display:flex;align-items:center;gap:10px;padding:9px 14px;background:#fff;border-bottom:1px solid var(--line);font-size:13px}
+  .backbar a{color:var(--brand);text-decoration:none}
+  .backbar[hidden]{display:none}
+  @media (max-width:560px){.subtabs{padding:8px 8px 0}.subtab{padding:7px 10px;font-size:13px}.tip{padding:6px 10px}}
+</style>
+</head>
+<body>
+<div class="backbar" id="backBar" hidden>
+  <span>PubChat 管理</span>
+  <a href="/index.html" id="backChat">← 返回聊天</a>
+</div>
+<nav class="subtabs" role="tablist" aria-label="管理二级页签" id="tabBar"></nav>
+<div class="tip" id="tabTip"></div>
+<main>
+  <iframe class="panel" id="manageFrame" title="管理"></iframe>
+</main>
+<script>
+(function () {
+  /* 二级页签 = 老 web 管理页能力的全量清单，一项一个页签。
+     只用一个 iframe 换 src：同一时刻文档里只有一组控件，
+     「没有重复入口」因此是结构保证的，不靠肉眼。 */
+  var TABS = [
+    { key: 'inst', label: '实例与运行状态', src: '/instances.html?embed=1',
+      note: '本机与远端实例、对外端口、本机管理口、在线人数、数据目录。' },
+    { key: 'members', label: '成员与邀请', src: '/members.html?embed=1',
+      note: '成员名单、一二级 Key、席位上限、待审与移出、智能体席位与接入方式，以及邀请码/邀请链接。' },
+    { key: 'server', label: '服务器设置', src: '/admin.html?embed=1&sec=server',
+      note: '实例名、加入审批、端口与指纹；改名与审批 15 分钟内可一键回滚。' },
+    { key: 'local', label: '设备与服务', src: '/server.html?embed=1',
+      note: '已授权设备、开机自动运行、桌面快捷方式、数据目录搬家、部署方式与首启复位。' },
+    { key: 'public', label: '公网地址', src: '/admin.html?embed=1&sec=public',
+      note: '临时地址、固定域名（Cloudflare 隧道）、已有反代地址。' },
+    { key: 'qrcode', label: '手机扫码', src: '/admin.html?embed=1&sec=qrcode',
+      note: '手机扫码进聊天页。二维码不含 Key，Key 要手动输入。' }
+  ];
+
+  /* 老链接/老跳转的键名继续能用；只列那些在新页签集里没有同名键的。 */
+  var ALIAS = {
+    instance: 'inst', general: 'inst', status: 'inst', runtime: 'inst',
+    deploy: 'local', style: 'local', options: 'local',
+    chat: 'members', users: 'members', agents: 'members', invite: 'members', seats: 'members',
+    manage: 'server', about: 'inst'
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var frame = $('manageFrame');
+  var tabBar = $('tabBar');
+  var embedded = window.parent && window.parent !== window;
+  var current = '';
+
+  function tabByKey(key) {
+    for (var i = 0; i < TABS.length; i++) if (TABS[i].key === key) return TABS[i];
+    return null;
+  }
+
+  function normalize(sec) {
+    if (!sec) return '';
+    if (tabByKey(sec)) return sec;
+    var t = ALIAS[sec];
+    return t && tabByKey(t) ? t : '';
+  }
+
+  function srcFor(tab) {
+    return tab.src + '&tab=' + encodeURIComponent(tab.key);
+  }
+
+  function activate(key, remember) {
+    var tab = tabByKey(key);
+    if (!tab) return;
+    current = key;
+    [].forEach.call(tabBar.children, function (btn) {
+      var on = btn.getAttribute('data-key') === key;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $('tabTip').textContent = tab.note;
+    frame.src = srcFor(tab);
+    if (remember !== false) {
+      try { localStorage.setItem('pubchat.manage.tab', key); } catch (e) {}
+    }
+    try { history.replaceState(null, '', location.pathname + '?sec=' + encodeURIComponent(key)); } catch (e) {}
+  }
+
+  for (var i = 0; i < TABS.length; i++) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'subtab';
+    b.id = 'mtab-' + TABS[i].key;
+    b.setAttribute('role', 'tab');
+    b.dataset.key = TABS[i].key;
+    b.innerHTML = TABS[i].label;
+    b.title = TABS[i].plain || TABS[i].label.replace(/（可选）/, '');
+    tabBar.appendChild(b);
+  }
+  tabBar.addEventListener('click', function (ev) {
+    var btn = ev.target.closest ? ev.target.closest('.subtab') : null;
+    if (btn) activate(btn.dataset.key);
+  });
+
+  /* 子页里点「去服务器设置」这类跳转：子页 → 本页 → 换页签。
+     壳关心的几类消息还要再往上转一层（本页嵌在 shell 里）。 */
+  var FORWARD = {
+    'pubchat-setup-done': 1,
+    'pubchat-go-chat': 1,
+    'pubchat-mode-changed': 1,
+    'pubchat-join-remote': 1,
+    'pubchat-instances-changed': 1,
+    'pubchat-open-instance': 1,
+    'pubchat-open-setup': 1
+  };
+
+  window.addEventListener('message', function (ev) {
+    if (ev.origin !== location.origin) return;
+    var d = ev.data || {};
+    if (FORWARD[d.type] && window.parent && window.parent !== window) {
+      try { window.parent.postMessage(d, location.origin); } catch (e) {}
+    }
+    if (d.type === 'pubchat-instances-refresh') {
+      try { frame.contentWindow.postMessage({ type: 'pubchat-instances-refresh' }, location.origin); } catch (e) {}
+      return;
+    }
+    if (d.type === 'pubchat-goto-tab') {
+      var k = normalize(d.tab);
+      if (k) activate(k);
+    }
+  });
+
+  if (!embedded) $('backBar').hidden = false;
+
+  var m = location.search.match(/[?&]sec=([^&]+)/);
+  var want = normalize(m ? decodeURIComponent(m[1]) : '');
+  if (!want) {
+    try { want = normalize(localStorage.getItem('pubchat.manage.tab') || ''); } catch (e) {}
+  }
+  activate(want || TABS[0].key, false);
+})();
+</script>
+</body>
+</html>

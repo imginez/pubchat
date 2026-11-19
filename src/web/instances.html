@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PubChat · 实例</title>
+<style>
+  :root{--ink:#1d2129;--muted:#86909c;--line:#e5e6eb;--bg:#f5f6f8;--brand:#2f6bff;--ok:#00a870;--err:#d93026;--warn:#ff7d00}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:22px 18px 52px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:12px;margin:0 0 16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:16px 18px;margin-bottom:14px}
+  .card h2{font-size:15px;margin:0 0 4px}
+  .card .muted{color:var(--muted);font-size:12px}
+  .inst{border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-top:10px}
+  .inst.local{background:#fafbff;border-color:#dce6ff}
+  .top{display:flex;align-items:center;gap:8px}
+  .dot{flex:none;width:7px;height:7px;border-radius:50%;background:#c9cdd4}
+  .dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(0,168,112,.12)}
+  .dot.off{background:var(--warn);box-shadow:0 0 0 3px rgba(255,125,0,.12)}
+  .name{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kind{flex:none;font-size:11px;padding:1px 7px;border-radius:99px;background:#f2f3f5;color:#4e5969}
+  .url{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#4e5969;word-break:break-all;margin-top:5px}
+  .meta{font-size:12px;color:var(--muted);margin-top:4px}
+  .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 11px;font:inherit;font-size:12px;color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--brand);color:var(--brand)}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+  button.primary:hover{color:#fff;filter:brightness(1.05)}
+  button.primary[disabled]{opacity:.5;cursor:default}
+  button.danger:hover{border-color:var(--err);color:var(--err)}
+  .form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .form .full{grid-column:1 / -1}
+  @media(max-width:620px){.form{grid-template-columns:1fr}}
+  input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px;outline:none;background:#fff;min-width:0}
+  input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,107,255,.1)}
+  .btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .err{color:var(--err);font-size:12px;min-height:18px;margin-top:6px}
+  .ok{color:var(--ok);font-size:12px;min-height:18px;margin-top:6px}
+  .stage{font-size:12px;color:var(--muted);margin-top:6px}
+  .rename{display:flex;gap:6px;margin-top:8px}
+  .rename[hidden]{display:none}
+  .test-out{margin-top:8px;font-size:12px;line-height:1.7;display:none}
+  .test-out.show{display:block}
+  .test-out .bad{color:var(--err)}
+  .test-out .good{color:var(--ok)}
+  .tagline{margin-top:16px;padding-top:12px;border-top:1px dashed var(--line)}
+  .tagline b{display:block;font-size:13px;margin-bottom:2px}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed #eef0f3;font-size:14px}
+  .row:last-child{border-bottom:0}
+  .row .k{color:var(--muted)}
+  .path{font-size:12px;text-align:right;word-break:break-all}
+  @media(max-width:520px){.wrap{padding:14px 10px 40px}.card{padding:13px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>实例</h1>
+  <p class="sub">本机聊天室和远端实例可以同时在线。每个实例单独登录，登录态按地址隔离；聊天页左侧栏按实例分组，顶部的「全部」把各实例房间汇总在一起。</p>
+
+  <div class="card">
+    <h2>本机</h2>
+    <div class="muted">这台电脑自己的聊天室，固定第一位，不能删除。</div>
+    <div id="localBox"></div>
+  </div>
+
+  <div class="card">
+    <h2>运行状态</h2>
+    <div class="row"><span class="k">在线</span><span id="rtOnline">-</span></div>
+    <div class="row"><span class="k">对外端口</span><span id="rtPort">-</span></div>
+    <div class="row"><span class="k">本机管理口</span><span id="rtAdminPort">-</span></div>
+    <div class="row"><span class="k">数据目录</span><span id="rtDataDir" class="path">-</span></div>
+    <div class="muted" style="margin-top:10px">管理页只监听 127.0.0.1，并且校验 Host/Origin，别的网页打不到它。远端实例的运行状态请到那个实例自己的管理页看。</div>
+  </div>
+
+  <div class="card">
+    <h2>远端实例</h2>
+    <div class="muted">别人的服务器，或你自己的公网部署。最多 20 个。</div>
+    <div id="remoteList"></div>
+
+    <div class="tagline">
+      <b>添加远端实例</b>
+      <div class="muted">填实例根地址；带反代前缀的写到前缀为止（例如 https://example.com/pub）。</div>
+      <div class="form">
+        <input id="addUrl" class="full" type="text" placeholder="https://example.com/pub" autocomplete="off" spellcheck="false">
+        <input id="addName" type="text" maxlength="30" placeholder="显示名（可留空）" autocomplete="off">
+        <button id="addTest" type="button">测试连接</button>
+      </div>
+      <div class="test-out" id="addTestOut"></div>
+      <div class="btns">
+        <button class="primary" id="addBtn" type="button">添加实例</button>
+      </div>
+      <div class="err" id="addErr"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>用邀请链接加入</h2>
+    <div class="muted">把朋友发来的邀请链接整段粘进来（形如 …/join.html#t=…）。加入成功后会自动登记成一个实例。</div>
+    <div class="form">
+      <input id="invLink" class="full" type="text" placeholder="https://…/join.html#t=…" autocomplete="off" spellcheck="false">
+      <input id="invName" type="text" maxlength="20" placeholder="你的显示名" autocomplete="name">
+      <input id="invCid" type="text" maxlength="32" placeholder="登录名（小写字母/数字/下划线）" autocomplete="username">
+    </div>
+    <div class="btns">
+      <button class="primary" id="invBtn" type="button">加入</button>
+    </div>
+    <div class="stage" id="invStage"></div>
+    <div class="err" id="invErr"></div>
+    <div class="ok" id="invOk"></div>
+  </div>
+</div>
+
+<script src="device.js"></script>
+<script src="invite.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var embedded = window.parent && window.parent !== window;
+  var state = null;
+  var noticeTimer = null;
+
+  // 管理页自愈：桌面壳还没存设备凭证时，管理口上 /api/shell-claim 免凭证，
+  // 先认领一次再加载，避免「本机服务在跑，但这台设备还没有管理凭证」。
+  (function ensureSecret() {
+    var has = false;
+    try { has = !!localStorage.getItem('pubchat.shell.secret'); } catch (e) {}
+    if (has) return;
+    fetch('/api/shell-claim', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.secret) {
+          try {
+            localStorage.setItem('pubchat.shell.secret', j.secret);
+            localStorage.setItem('pubchat.device.secret', j.secret);
+          } catch (e) {}
+        }
+      })
+      .catch(function () {});
+  })();
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function notify(type, extra) {
+    if (!embedded) return;
+    var msg = { type: type };
+    if (extra) for (var k in extra) msg[k] = extra[k];
+    try { window.parent.postMessage(msg, location.origin); } catch (e) {}
+  }
+
+  function notifyChanged() {
+    notify('pubchat-instances-changed');
+  }
+
+  function gotoSubtab(name) {
+    if (!embedded) return;
+    try { window.parent.postMessage({ type: 'pubchat-goto-tab', tab: name }, location.origin); } catch (e) {}
+  }
+
+  // 桌面壳把设备凭证存在 localStorage（/api/shell-claim），管理页同源可读，
+  // 所有本机管理 API 请求都要带上它，否则 401。
+  function authHeaders(h) {
+    h = h || {};
+    try {
+      var s = localStorage.getItem('pubchat.shell.secret');
+      if (s) h['Authorization'] = 'Bearer ' + s;
+    } catch (e) {}
+    return h;
+  }
+
+  function api(url, opts) {
+    opts = opts || {};
+    opts.headers = authHeaders(opts.headers);
+    return fetch(url, opts).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, j: j || {} }; });
+    });
+  }
+
+  function post(obj) {
+    return api('/api/instances', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(obj)
+    });
+  }
+
+  /* ---------------- 列表 ---------------- */
+
+  function renderLocal() {
+    var box = $('localBox');
+    var ready = !!(state && state.initialized);
+    var serving = !!(state && state.serving);
+    var url = state
+      ? 'http://127.0.0.1:' + state.port + '/'
+      : '';
+    var cls = !serving ? '' : (ready ? 'on' : 'off');
+    var meta = !serving
+      ? '本机对外服务没有在运行（当前是纯客户端模式，或启动失败）。'
+      : (ready ? '服务运行中 · 在线 ' + (state.online || 0) + ' 人'
+               : '还没有创建本机聊天室。');
+    var html = '<div class="inst local">' +
+      '<div class="top"><span class="dot ' + cls + '"></span><span class="name">本机</span><span class="kind">本机</span></div>' +
+      (url ? '<div class="url">' + esc(url) + '</div>' : '') +
+      '<div class="meta">' + esc(meta) + '</div>' +
+      '<div class="acts">' +
+        (ready && serving ? '<button type="button" data-local-open>打开</button>' : '') +
+        (ready && serving ? '<button type="button" data-local-manage>管理本机</button>' : '') +
+        (!ready ? '<button type="button" class="primary" data-local-create>创建本机聊天室</button>' : '') +
+      '</div></div>';
+    box.innerHTML = html;
+
+    var open = box.querySelector('[data-local-open]');
+    if (open) open.addEventListener('click', function () { notify('pubchat-open-instance', { id: 'local' }); });
+    var manage = box.querySelector('[data-local-manage]');
+    if (manage) manage.addEventListener('click', function () { gotoSubtab('members'); });
+    var create = box.querySelector('[data-local-create]');
+    if (create) create.addEventListener('click', function () { notify('pubchat-open-setup'); });
+  }
+
+  function renderRemotes() {
+    var host = $('remoteList');
+    var items = ((state && state.instances) || []).filter(function (i) { return i.kind === 'remote'; });
+    if (!items.length) {
+      host.innerHTML = '<div class="muted" style="margin-top:10px">还没有远端实例。</div>';
+      return;
+    }
+    host.innerHTML = items.map(function (it) {
+      return '<div class="inst" data-id="' + esc(it.id) + '">' +
+        '<div class="top"><span class="dot"></span><span class="name">' + esc(it.name || it.url) + '</span>' +
+        '<span class="kind">远端</span></div>' +
+        '<div class="url">' + esc(it.url) + '</div>' +
+        '<div class="meta">管理页需要先在这台服务器上认领设备；没有凭证只会看到「没有管理权」。</div>' +
+        '<div class="acts">' +
+          '<button type="button" data-open>打开</button>' +
+          '<button type="button" data-manage>管理</button>' +
+          '<button type="button" data-test>测试</button>' +
+          '<button type="button" data-rename>改名</button>' +
+          '<button type="button" class="danger" data-del>删除</button>' +
+        '</div>' +
+        '<div class="rename" hidden><input type="text" maxlength="30" value="' + esc(it.name || '') + '" placeholder="显示名">' +
+          '<button type="button" class="primary" data-save>保存</button>' +
+          '<button type="button" data-cancel>取消</button></div>' +
+        '<div class="test-out"></div>' +
+      '</div>';
+    }).join('');
+
+    Array.prototype.forEach.call(host.querySelectorAll('.inst'), function (card) {
+      var id = card.getAttribute('data-id');
+      var out = card.querySelector('.test-out');
+      var row = card.querySelector('.rename');
+
+      card.querySelector('[data-open]').addEventListener('click', function () {
+        notify('pubchat-open-instance', { id: id });
+      });
+      card.querySelector('[data-manage]').addEventListener('click', function () {
+        var base = card.querySelector('.url').textContent.replace(/\/+$/, '');
+        // 远端实例的管理页在它自己的服务器回环口（admin.html），公网浏览器打不开。
+        // 这里不弹独立窗口，只给出提示和链接（要管理得那台机器本机操作）。
+        var url = base + '/admin.html';
+        out.className = 'test-out show';
+        out.innerHTML = '远端实例的管理页在它自己的服务器上（管理口只绑 127.0.0.1，公网打不开）。' +
+          '要管理它，请在那台服务器上打开 <a href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(url) + '</a>。';
+      });
+      card.querySelector('[data-test]').addEventListener('click', function () {
+        testConnection(card.querySelector('.url').textContent, out, card.querySelector('[data-test]'));
+      });
+      card.querySelector('[data-rename]').addEventListener('click', function () {
+        row.hidden = false;
+        row.querySelector('input').focus();
+      });
+      card.querySelector('[data-cancel]').addEventListener('click', function () {
+        row.hidden = true;
+      });
+      card.querySelector('[data-save]').addEventListener('click', function () {
+        var name = row.querySelector('input').value.trim();
+        if (!name) return;
+        post({ action: 'update', id: id, name: name }).then(function (res) {
+          if (!res.ok || !res.j.ok) throw new Error(res.j.error || '改名失败');
+          return reload().then(function () { notifyChanged(); });
+        }).catch(function (err) { out.className = 'test-out show'; out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>'; });
+      });
+      card.querySelector('[data-del]').addEventListener('click', function () {
+        if (!confirm('从这台电脑移除「' + card.querySelector('.name').textContent + '」？\n只删本地登记，不会动对方服务器上的任何数据。')) return;
+        post({ action: 'remove', id: id }).then(function (res) {
+          if (!res.ok || !res.j.ok) throw new Error(res.j.error || '删除失败');
+          return reload().then(function () { notifyChanged(); });
+        }).catch(function (err) { out.className = 'test-out show'; out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>'; });
+      });
+    });
+  }
+
+  function renderRuntime() {
+    if (!state) return;
+    $('rtOnline').textContent = (typeof state.online === 'number' ? state.online : '-') +
+      (typeof state.online === 'number' ? ' 人' : '');
+    $('rtPort').textContent = state.port || '-';
+    $('rtAdminPort').textContent = state.admin_port || '-';
+    $('rtDataDir').textContent = state.data_dir || '-';
+  }
+
+  function render() {
+    renderLocal();
+    renderRuntime();
+    renderRemotes();
+  }
+
+  function reload() {
+    return api('/api/state', { cache: 'no-store' }).then(function (res) {
+      if (!res.ok) throw new Error('读取状态失败');
+      state = res.j;
+      render();
+    });
+  }
+
+  /* ---------------- 测试 / 添加 ---------------- */
+
+  function testConnection(url, out, btn) {
+    url = String(url || '').trim();
+    if (!url) return Promise.resolve(false);
+    out.className = 'test-out show';
+    out.innerHTML = '正在测试…';
+    if (btn) btn.disabled = true;
+    return api('/api/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'test_remote', url: url })
+    }).then(function (res) {
+      var r = res.j.result || {};
+      var stages = r.stages || {};
+      function mark(s) { return s && s.ok ? '<span class="good">✓</span>' : '<span class="bad">✗</span>'; }
+      var html = 'DNS ' + mark(stages.dns) + ' · TCP ' + mark(stages.tcp) + ' · WS ' + mark(stages.ws);
+      if (r.reachable) {
+        html += '<br><span class="good">' + esc(r.note || '可以连接') + '</span>';
+      } else {
+        html += '<br><span class="bad">' + esc(r.note || res.j.error || '连不上') + '</span>';
+      }
+      out.innerHTML = html;
+      return !!r.reachable;
+    }).catch(function (err) {
+      out.innerHTML = '<span class="bad">测试出错：' + esc(err.message) + '</span>';
+      return false;
+    }).finally(function () {
+      if (btn) btn.disabled = false;
+    });
+  }
+
+  $('addTest').addEventListener('click', function () {
+    $('addErr').textContent = '';
+    testConnection($('addUrl').value, $('addTestOut'), $('addTest'));
+  });
+
+  $('addBtn').addEventListener('click', function () {
+    var url = $('addUrl').value.trim();
+    var name = $('addName').value.trim();
+    $('addErr').textContent = '';
+    if (!url) { $('addErr').textContent = '请填写地址'; return; }
+    $('addBtn').disabled = true;
+    post({ action: 'add', url: url, name: name }).then(function (res) {
+      if (!res.ok || !res.j.ok) throw new Error(res.j.error || '添加失败');
+      $('addUrl').value = '';
+      $('addName').value = '';
+      $('addTestOut').className = 'test-out';
+      return reload().then(function () { notifyChanged(); });
+    }).catch(function (err) {
+      $('addErr').textContent = err.message;
+    }).finally(function () {
+      $('addBtn').disabled = false;
+    });
+  });
+
+  function syncAddBtn() {
+    $('addBtn').disabled = !$('addUrl').value.trim();
+  }
+  $('addUrl').addEventListener('input', function () {
+    $('addTestOut').className = 'test-out';
+    $('addTestOut').innerHTML = '';
+    syncAddBtn();
+  });
+  syncAddBtn();
+
+  /* ---------------- 邀请链接加入 ---------------- */
+
+  $('invBtn').addEventListener('click', function () {
+    var btn = $('invBtn');
+    $('invErr').textContent = '';
+    $('invOk').textContent = '';
+    btn.disabled = true;
+    window.PubChatInvite.join({
+      link: $('invLink').value,
+      name: $('invName').value,
+      clientId: $('invCid').value,
+      onStage: function (text) { $('invStage').textContent = text; },
+      onDone: function (info) {
+        btn.disabled = false;
+        $('invStage').textContent = '';
+        if (info.pending) {
+          $('invOk').textContent = '已提交，等待房主批准。批准后可在这个实例里登录。';
+          reload().then(function () { notifyChanged(); });
+        } else {
+          $('invOk').textContent = '已加入 ' + info.instance.url + '，正在打开…';
+          // 面板自己也要刷新，否则还显示「还没有远端实例」
+          reload().then(function () { notifyChanged(); });
+          notify('pubchat-join-remote', {
+            instance: info.instance,
+            cred: { u: info.client_id, k: info.key1 }
+          });
+        }
+        $('invLink').value = '';
+        $('invName').value = '';
+        $('invCid').value = '';
+      },
+      onFail: function (err) {
+        btn.disabled = false;
+        $('invStage').textContent = '';
+        $('invErr').textContent = err.message;
+      }
+    });
+  });
+
+  // 壳把远端自报的名字写回配置后，通知这里重读一次（本页可能正开着）
+  window.addEventListener('message', function (ev) {
+    if (ev.origin !== location.origin) return;
+    var d = ev.data || {};
+    if (d.type === 'pubchat-instances-refresh') reload().catch(function () {});
+  });
+
+  reload().catch(function (err) {
+    // 0.8.17：服务器部署（pub2 之类）上没有「本机服务」，读不到 /api/state 是常态，
+    // 说明清楚就行，别把「读取本机状态失败」当成故障甩给用户。
+    var isRemoteHost = !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname) &&
+                       !/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname);
+    if (isRemoteHost) {
+      $('localBox').innerHTML = '<div class="muted">这台是服务器部署，没有「本机服务」可读；' +
+        '下面的远端实例与在线状态照常可用。</div>';
+    } else {
+      $('localBox').innerHTML = '<div class="err">读取本机状态失败：' + esc(err.message) + '</div>';
+    }
+  });
+})();
+</script>
+</body>
+</html>

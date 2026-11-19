@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PubChat</title>
+<link rel="stylesheet" href="weui-tokens.css">
+<style>
+:root{
+  --bg:var(--weui-BG-0);--panel:var(--weui-BG-2);--ink:var(--weui-FG-0);
+  --muted:var(--weui-FG-1);--faint:var(--weui-FG-2);
+  --line:rgba(0,0,0,.08);--brand:var(--weui-BRAND);--red:var(--weui-RED);
+  --link:var(--weui-LINK);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+  font:400 15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased}
+button{font:inherit;border:0;background:none;color:inherit;cursor:pointer}
+.hidden{display:none!important}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+.topbar{height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px;
+  background:var(--bg);border-bottom:1px solid var(--line)}
+.topbar b{font-size:17px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iconbtn{width:34px;height:34px;border-radius:6px;display:grid;place-items:center;font-size:18px;color:var(--ink)}
+.iconbtn:active{background:rgba(0,0,0,.06)}
+.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel);
+  border-bottom:1px solid var(--line);cursor:pointer}
+.row:active{background:#f5f5f5}
+.av{width:46px;height:46px;border-radius:50%;flex:none;display:grid;place-items:center;
+  color:#fff;font-size:16px;font-weight:600;background:#7a8ea8}
+.row-main{flex:1;min-width:0}
+.row-title{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.badge{min-width:19px;height:19px;border-radius:10px;background:var(--red);color:#fff;
+  font-size:11px;line-height:19px;text-align:center;padding:0 5px;flex:none}
+.empty{padding:48px 28px;text-align:center;color:var(--muted)}
+.empty h3{margin:0 0 6px;font-size:17px;color:var(--ink)}
+.cards{padding:20px 16px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border-radius:12px;padding:18px}
+.card h3{margin:0 0 6px;font-size:16px}
+.card p{margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.6}
+.btn{height:44px;border-radius:8px;background:var(--brand);color:#fff;font-size:15px;
+  display:flex;align-items:center;justify-content:center;width:100%}
+.btn:active{background:#06ad56}
+.btn.ghost{background:#f2f2f2;color:var(--ink)}
+.btn.ghost:active{background:#e9e9e9}
+.btn[disabled]{opacity:.4}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field span{font-size:12px;color:var(--muted)}
+.field input{height:44px;padding:0 12px;border:0;border-radius:8px;background:#f7f7f7;font:inherit;outline:none}
+.field input:focus{box-shadow:0 0 0 2px rgba(7,193,96,.15)}
+.tip{font-size:12px;color:var(--muted);line-height:1.7}
+.err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px}
+.frame-wrap{position:absolute;inset:52px 0 0 0;background:var(--bg)}
+.frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg);display:none}
+.frame-wrap iframe.on{display:block}
+.room-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--panel);
+  border-bottom:1px solid var(--line);cursor:pointer}
+.room-item .nm{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room-item .inst{font-size:11px;color:var(--faint);margin-left:6px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
+.modal-card{width:100%;max-width:420px;max-height:86vh;overflow:auto;background:var(--panel);border-radius:14px;padding:22px}
+.modal-card h2{margin:0 0 8px;font-size:19px}
+.modal-card p{margin:0 0 12px;font-size:14px;color:var(--muted);line-height:1.7}
+.modal-card label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+.modal-card input{width:100%;height:44px;padding:0 12px;border:0;border-radius:8px;background:#f7f7f7;font:inherit;outline:none}
+.dots{display:flex;gap:6px;justify-content:center;margin:14px 0}
+.dot{width:7px;height:7px;border-radius:50%;background:#d6d6d6}
+.dot.on{background:var(--brand)}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px;word-break:break-all}
+.gd-mono{font-family:ui-monospace,Consolas,monospace;font-size:13px;word-break:break-all}
+</style>
+<!-- 开屏动画（S3）：与桌面端同一份组件，只有副标题的称谓不同 -->
+<script src="splash.js"></script>
+</head>
+<body>
+
+<div class="pc-splash" id="pcSplash">
+  <div class="mk">P</div>
+  <div class="nm">PubChat</div>
+  <div class="sb">自托管的聊天室 · 手机版</div>
+  <div class="ld"></div>
+</div>
+
+<div class="screen" id="screen-home">
+  <div class="topbar">
+    <b>PubChat</b>
+    <button class="iconbtn" id="btnHelp" title="新手引导">?</button>
+    <button class="iconbtn" id="btnManage" title="管理服务器">⚙</button>
+  </div>
+  <div class="body" id="homeBody"></div>
+</div>
+
+<div class="screen hidden" id="screen-instance">
+  <div class="topbar">
+    <button class="iconbtn" id="btnBack">‹</button>
+    <b id="instTitle">—</b>
+    <button class="iconbtn" id="btnOpenAdmin" title="管理">⚙</button>
+  </div>
+  <div class="frame-wrap" id="frameWrap"></div>
+  <div class="hidden" id="adminHint" style="padding:16px">
+    <div class="card">
+      <h3 id="adminHintTitle">管理面板不在手机上开</h3>
+      <p id="adminHintBody"></p>
+      <div class="field"><span>在电脑上打开这个地址</span><input id="adminAddr" readonly></div>
+      <button class="btn" id="btnCopyAdmin">复制</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px" id="adminHintFoot"></p>
+    </div>
+  </div>
+</div>
+
+<div class="screen hidden" id="screen-all">
+  <div class="topbar">
+    <button class="iconbtn" id="btnBackAll">‹</button>
+    <b>全部</b>
+  </div>
+  <div class="body" id="allBody"></div>
+</div>
+
+<div class="screen hidden" id="screen-manage">
+  <div class="topbar">
+    <button class="iconbtn" id="btnBackManage">‹</button>
+    <b>管理我的服务器</b>
+  </div>
+  <div class="body" style="padding:16px">
+    <div class="card">
+      <h3>用认领链接接管</h3>
+      <p>服务器部署时终端会打印「5 分钟认领链接 + 6 位码」。把链接粘贴到这里，输入 6 位码即可成为管理设备。</p>
+      <div class="field"><span>认领链接</span><input id="claimLink" placeholder="https://…/claim#b=…"></div>
+      <button class="btn" id="btnClaim">打开认领页</button>
+      <div class="err" id="claimErr"></div>
+    </div>
+  </div>
+</div>
+
+<div class="screen hidden" id="screen-join">
+  <div class="topbar">
+    <button class="iconbtn" id="btnBackJoin">‹</button>
+    <b>加入聊天室</b>
+  </div>
+  <div class="body" style="padding:16px">
+    <div class="card">
+      <h3>粘贴邀请链接</h3>
+      <p>形如 https://…/join.html#t=…，一次性，过期或用过就失效。没有链接让房主在「成员 → 邀请」生成，或扫他屏幕上的二维码。</p>
+      <div class="field"><span>邀请链接</span><input id="joinLink" placeholder="https://…/join.html#t=…"></div>
+      <div class="field"><span>显示名（别人看到的）</span><input id="joinName" maxlength="20" placeholder="比如 小明"></div>
+      <div class="field"><span>登录名（小写字母/数字/下划线）</span><input id="joinCid" maxlength="32" placeholder="比如 xiaoming"></div>
+      <button class="btn" id="btnJoin">加入</button>
+      <div class="err" id="joinErr"></div>
+      <p class="tip" style="margin-top:12px">加入成功会显示一级 Key，这是登录密码，只显示一次，请保存。</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="onboarding">
+  <div class="modal-card">
+    <h2 id="obTitle"></h2>
+    <div id="obBody"></div>
+    <div class="dots" id="obDots"></div>
+    <button class="btn" id="obNext">下一步</button>
+    <button class="btn ghost" id="obSkip" style="margin-top:8px">跳过</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="keyModal">
+  <div class="modal-card">
+    <h2>加入成功</h2>
+    <p>把下面的一级 Key 保存好，它是登录密码，只显示这一次。</p>
+    <p class="mono" id="keyText"></p>
+    <button class="btn" id="keyOk">进入聊天</button>
+  </div>
+</div>
+
+<script src="guide.js"></script>
+<script>
+(function () {
+  'use strict';
+  var LS = 'pubchat.instances.v1';
+  var LS_ONBOARD = 'pubchat.onboarded.v1';
+  var instances = [];
+  var frames = {};
+  var pending = {};
+  var instData = {};
+  var view = 'home';
+  var current = '';
+
+  function $(s) { return document.querySelector(s); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function load() {
+    try { instances = JSON.parse(localStorage.getItem(LS) || '[]') || []; } catch (e) { instances = []; }
+    if (!Array.isArray(instances)) instances = [];
+  }
+  function save() { try { localStorage.setItem(LS, JSON.stringify(instances)); } catch (e) {} }
+  function idFor(url) {
+    for (var i = 0; i < instances.length; i++) if (instances[i].url === url) return instances[i].id;
+    return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+  function findInst(id) { for (var i = 0; i < instances.length; i++) if (instances[i].id === id) return instances[i]; return null; }
+  function originOf(url) { try { return new URL(url).origin; } catch (e) { return '*'; } }
+  function baseOf(url) { return String(url || '').replace(/\/+$/, ''); }
+  function show(id) {
+    ['screen-home', 'screen-instance', 'screen-all', 'screen-manage', 'screen-join'].forEach(function (s) {
+      $('#' + s).classList.toggle('hidden', s !== id);
+    });
+    view = id.replace('screen-', '');
+  }
+
+  function totalUnread() {
+    var n = 0;
+    for (var id in instData) {
+      var rooms = instData[id].rooms || [];
+      rooms.forEach(function (r) { if (!r.muted) n += (r.unread || 0); });
+    }
+    return n;
+  }
+
+  function renderHome() {
+    var box = $('#homeBody');
+    box.textContent = '';
+    var all = document.createElement('div');
+    all.className = 'row';
+    all.onclick = function () { openAll(); };
+    all.innerHTML = '<span class="av" style="background:#07c160">全</span>' +
+      '<div class="row-main"><div class="row-title">全部</div>' +
+      '<div class="row-sub">跨实例未读优先</div></div>' +
+      (totalUnread() ? '<span class="badge">' + (totalUnread() > 99 ? '99+' : totalUnread()) + '</span>' : '');
+    box.appendChild(all);
+
+    if (!instances.length) {
+      var c = document.createElement('div');
+      c.className = 'cards';
+      c.innerHTML = '<div class="empty"><h3>还没有加入任何聊天室</h3>' +
+        '<p>加入朋友发来的邀请，或管理你部署的服务器。</p></div>' +
+        '<div class="card"><h3>加入聊天室</h3><p>粘贴邀请链接，或让房主发二维码。</p>' +
+        '<button class="btn" id="cardJoin">加入</button></div>' +
+        '<div class="card"><h3>创建聊天室</h3><p>先加入一台服务器，再在房间列表点「+」建房。手机不托管服务器。</p>' +
+        '<button class="btn ghost" id="cardCreate">先加入服务器</button></div>' +
+        '<div class="card"><h3>管理我的服务器</h3><p>用部署时终端打印的 5 分钟认领链接接管。</p>' +
+        '<button class="btn ghost" id="cardManage">打开认领</button></div>';
+      box.appendChild(c);
+      $('#cardJoin').onclick = function () { show('screen-join'); };
+      $('#cardCreate').onclick = function () { show('screen-join'); };
+      $('#cardManage').onclick = function () { show('screen-manage'); };
+      return;
+    }
+
+    instances.forEach(function (inst) {
+      var d = instData[inst.id] || {};
+      var rooms = d.rooms || [];
+      var unread = 0, last = '';
+      rooms.forEach(function (r) {
+        if (!r.muted) unread += (r.unread || 0);
+        if (r.title) last = r.title;
+      });
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<span class="av">' + esc((inst.name || 'P')[0]) + '</span>' +
+        '<div class="row-main"><div class="row-title">' + esc(inst.name || inst.url) + '</div>' +
+        '<div class="row-sub">' + esc(d.connected ? (last ? '最近：' + last : '已连接') : '未连接') + '</div></div>' +
+        (unread ? '<span class="badge">' + (unread > 99 ? '99+' : unread) + '</span>' : '');
+      row.onclick = function () { openInstance(inst.id); };
+      box.appendChild(row);
+    });
+    var add = document.createElement('div');
+    add.className = 'cards';
+    add.innerHTML = '<button class="btn ghost" id="homeJoin">加入另一台服务器</button>';
+    box.appendChild(add);
+    $('#homeJoin').onclick = function () { show('screen-join'); };
+  }
+
+  function openAll() {
+    show('screen-all');
+    renderAll();
+  }
+
+  function renderAll() {
+    var box = $('#allBody');
+    box.textContent = '';
+    var rows = [];
+    Object.keys(instData).forEach(function (iid) {
+      var inst = findInst(iid);
+      if (!inst) return;
+      (instData[iid].rooms || []).forEach(function (r) {
+        if (r.kind === 'dm' || r.kind === 'own') return;
+        rows.push({ iid: iid, inst: inst, room: r });
+      });
+    });
+    rows.sort(function (a, b) {
+      var ua = a.room.unread || 0, ub = b.room.unread || 0;
+      if (ua !== ub) return ub - ua;
+      return (b.room.lastTs || 0) - (a.room.lastTs || 0);
+    });
+    if (!rows.length) {
+      box.innerHTML = '<div class="empty">还没有房间。打开一个实例开始聊天。</div>';
+      return;
+    }
+    rows.forEach(function (x) {
+      var el = document.createElement('div');
+      el.className = 'room-item';
+      el.innerHTML = '<div class="nm">' + esc(x.room.title || x.room.slug) +
+        '<span class="inst">' + esc(x.inst.name || '') + '</span></div>' +
+        (x.room.unread ? '<span class="badge">' + (x.room.unread > 99 ? '99+' : x.room.unread) + '</span>' : '');
+      el.onclick = function () {
+        openInstance(x.iid);
+        setTimeout(function () { postTo(x.iid, { type: 'pubchat-open-room', v: 2, room: x.room.slug }); }, 300);
+      };
+      box.appendChild(el);
+    });
+  }
+
+  function ensureFrame(id) {
+    if (frames[id]) return frames[id];
+    var inst = findInst(id);
+    if (!inst) return null;
+    var fr = document.createElement('iframe');
+    fr.title = inst.name || inst.url;
+    fr.dataset.iid = id;
+    fr.addEventListener('load', function () {
+      postTo(id, { type: 'pubchat-host-hello', v: 2 });
+    });
+    var src = baseOf(inst.url) + '/?iid=' + encodeURIComponent(id);
+    var c = pending[id];
+    if (c && c.u && c.k) src += '#u=' + encodeURIComponent(c.u) + '&k=' + encodeURIComponent(c.k);
+    fr.src = src;
+    $('#frameWrap').appendChild(fr);
+    frames[id] = fr;
+    return fr;
+  }
+
+  function openInstance(id) {
+    var inst = findInst(id);
+    if (!inst) return toast('实例不存在');
+    current = id;
+    show('screen-instance');
+    // 回到聊天要把说明面板收掉：它和 iframe 是同屏的两层，不收起会一直压着
+    $('#adminHint').classList.add('hidden');
+    $('#instTitle').textContent = inst.name || inst.url;
+    var fr = ensureFrame(id);
+    Object.keys(frames).forEach(function (k) { frames[k].classList.toggle('on', k === id); });
+    if (fr) fr.classList.add('on');
+    postTo(id, { type: 'pubchat-host-hello', v: 2 });
+  }
+
+  function postTo(id, obj) {
+    var fr = frames[id]; var inst = findInst(id);
+    if (!fr || !inst || !fr.contentWindow) return;
+    try { fr.contentWindow.postMessage(obj, originOf(inst.url)); } catch (e) {}
+  }
+
+  window.addEventListener('message', function (e) {
+    var iid = '';
+    Object.keys(frames).forEach(function (k) {
+      if (frames[k] && frames[k].contentWindow === e.source) iid = k;
+    });
+    if (!iid) return;
+    var d = e.data || {};
+    if (d.type === 'pubchat-host-state') {
+      var prev = instData[iid] || {};
+      instData[iid] = {
+        connected: !!d.connected,
+        name: (typeof d.name === 'string' && d.name) ? d.name : (prev.name || ''),
+        rooms: Array.isArray(d.rooms) ? d.rooms : [],
+        at: Date.now()
+      };
+      if (view === 'home') renderHome();
+      if (view === 'all') renderAll();
+    }
+  });
+
+  /* ---------------- 加入远端 ---------------- */
+  function parseLink(raw) {
+    var text = String(raw || '').trim();
+    if (!text) throw new Error('请粘贴邀请链接');
+    if (text.indexOf('://') < 0) text = 'https://' + text;
+    var u = new URL(text);
+    var scheme = u.protocol.replace(':', '').toLowerCase();
+    if (scheme !== 'http' && scheme !== 'https') throw new Error('只支持 http/https 链接');
+    var token = '';
+    try { token = new URLSearchParams(u.hash.slice(1)).get('t') || ''; } catch (e) {}
+    if (!token) throw new Error('链接里没有邀请码（应形如 …/join.html#t=…）');
+    var basePath = u.pathname.replace(/[^\/]*$/, '');
+    var root = u.origin + basePath;
+    return {
+      token: token,
+      base: root.replace(/\/$/, ''),
+      ws: (scheme === 'https' ? 'wss://' : 'ws://') + u.host + basePath + 'ws'
+    };
+  }
+
+  function joinRemote() {
+    var err = $('#joinErr');
+    err.textContent = '';
+    var info;
+    try { info = parseLink($('#joinLink').value); } catch (e) { err.textContent = e.message; return; }
+    var name = ($('#joinName').value || '').trim();
+    var cid = ($('#joinCid').value || '').trim().toLowerCase();
+    if (!name) { err.textContent = '请填写显示名'; return; }
+    if (!/^[a-z0-9_]{2,32}$/.test(cid)) { err.textContent = '登录名只能小写字母/数字/下划线，2-32 位'; return; }
+    $('#btnJoin').disabled = true;
+    err.textContent = '正在加入…';
+    var ws;
+    try { ws = new WebSocket(info.ws); } catch (e) { $('#btnJoin').disabled = false; err.textContent = '连接失败：' + e.message; return; }
+    var done = false;
+    var timer = setTimeout(function () {
+      if (done) return;
+      done = true; try { ws.close(); } catch (e) {}
+      $('#btnJoin').disabled = false; err.textContent = '连接超时，请检查服务器地址';
+    }, 10000);
+    ws.onopen = function () {
+      ws.send(JSON.stringify({ type: 'join', token: info.token, name: name, client_id: cid }));
+    };
+    ws.onmessage = function (ev) {
+      var m;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.type === 'error') {
+        done = true; clearTimeout(timer); $('#btnJoin').disabled = false;
+        err.textContent = m.message || m.code || '加入失败';
+        try { ws.close(); } catch (e) {}
+        return;
+      }
+      if (m.type === 'pending') {
+        done = true; clearTimeout(timer); $('#btnJoin').disabled = false;
+        err.textContent = '已提交，等待房主批准。';
+        try { ws.close(); } catch (e) {}
+        return;
+      }
+      if (m.type !== 'joined') return;
+      done = true; clearTimeout(timer);
+      try { ws.close(); } catch (e) {}
+      var id = idFor(info.base);
+      var inst = findInst(id);
+      if (!inst) {
+        inst = { id: id, url: info.base, name: (function () { try { return new URL(info.base).hostname; } catch (e) { return '远端实例'; } })() };
+        instances.push(inst);
+        save();
+      }
+      pending[id] = { u: m.client_id, k: m.key1 };
+      $('#keyText').textContent = m.key1;
+      $('#keyModal').classList.remove('hidden');
+      $('#keyOk').onclick = function () {
+        $('#keyModal').classList.add('hidden');
+        $('#btnJoin').disabled = false;
+        show('screen-home');
+        renderHome();
+        openInstance(id);
+      };
+    };
+    ws.onerror = function () {
+      if (done) return;
+      done = true; clearTimeout(timer); $('#btnJoin').disabled = false;
+      err.textContent = '连不上服务器，检查链接或网络';
+    };
+  }
+
+  /* ---------------- 认领 / 管理 ---------------- */
+  function openClaim() {
+    var raw = ($('#claimLink').value || '').trim();
+    var err = $('#claimErr');
+    err.textContent = '';
+    if (!raw) { err.textContent = '请粘贴认领链接'; return; }
+    if (raw.indexOf('://') < 0) raw = 'https://' + raw;
+    var u;
+    try { u = new URL(raw); } catch (e) { err.textContent = '链接格式不对'; return; }
+    var base = u.origin + u.pathname.replace(/[^\/]*$/, '').replace(/\/$/, '');
+    var id = idFor(base);
+    var inst = findInst(id);
+    if (!inst) {
+      inst = { id: id, url: base, name: u.hostname };
+      instances.push(inst);
+      save();
+    }
+    show('screen-instance');
+    $('#instTitle').textContent = inst.name;
+    var fr = ensureFrame(id);
+    Object.keys(frames).forEach(function (k) { frames[k].classList.toggle('on', k === id); });
+    if (fr) { fr.classList.add('on'); fr.src = raw; }
+  }
+
+  /* 管理面永远不在对外口上：本机部署时管理口只绑那台机器的 127.0.0.1，
+     手机连路由都过不去；云端实例的 /admin.html 又要先兑换设备凭证。
+     所以这里不再把 admin.html 塞进 iframe 吃一个 404，而是把「在哪台机器上、
+     打开哪个地址」讲清楚，让人复制到电脑上用。 */
+  function adminAddrFor(inst) {
+    var base = baseOf(inst.url);
+    var u;
+    try { u = new URL(base + '/'); } catch (e) { return { addr: base + '/admin.html', local: false }; }
+    var host = u.hostname || '';
+    var local = host === 'localhost' || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(host);
+    if (!local) return { addr: base + '/admin.html', local: false };
+    // 本机部署的默认口径：管理口 = 聊天口 +1（hosts/local.py 起服务就是这么算的）
+    var port = u.port ? (parseInt(u.port, 10) + 1) : '';
+    return { addr: u.protocol + '//' + host + (port ? ':' + port : '') + '/admin.html', local: true };
+  }
+
+  function openAdmin(id) {
+    var inst = findInst(id);
+    if (!inst) return;
+    show('screen-instance');
+    $('#instTitle').textContent = (inst.name || '') + ' · 管理';
+    Object.keys(frames).forEach(function (k) { frames[k].classList.remove('on'); });
+    var a = adminAddrFor(inst);
+    $('#adminAddr').value = a.addr;
+    if (a.local) {
+      $('#adminHintTitle').textContent = '管理面板只能在这台服务器本机打开';
+      $('#adminHintBody').textContent =
+        '这台 PubChat 跑在另一台电脑上，它的管理口只绑那台机器自己的 127.0.0.1——'
+        + '手机访问不到，这不是坏了，是故意不给公网开这条路。';
+      $('#adminHintFoot').textContent =
+        '默认管理端口 = 聊天端口 +1。部署时改过端口的话，在那台电脑上直接打开 PubChat 主界面 → 管理。';
+    } else {
+      $('#adminHintTitle').textContent = '管理页要先认领这台设备';
+      $('#adminHintBody').textContent =
+        '这是台云服务器，管理页可以直接打开，但没认领过的浏览器只会看到'
+        + '「需要管理员设备凭证」。用服务器管理员给的认领链接兑换一次即可。';
+      $('#adminHintFoot').textContent =
+        '回到「管理我的服务器」粘贴认领链接；或者直接在电脑浏览器打开上面的地址。';
+    }
+    $('#adminHint').classList.remove('hidden');
+  }
+
+  function copyAdminAddr() {
+    var el = $('#adminAddr');
+    el.select();
+    el.setSelectionRange(0, el.value.length);
+    var done = function () { toast('已复制，拿到电脑上打开'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(el.value).then(done, function () {
+        try { document.execCommand('copy'); done(); }
+        catch (e) { toast('复制失败，长按输入框手动选'); }
+      });
+      return;
+    }
+    try { document.execCommand('copy'); done(); }
+    catch (e) { toast('复制失败，长按输入框手动选'); }
+  }
+
+  /* ---------------- 首启引导 ---------------- */
+  /* 引导四步：文案与桌面端同一份（web/guide.js），这里只是外壳与称谓不同 */
+  var steps = window.PubChatGuide ? window.PubChatGuide.steps('mobile') : [];
+  var obIndex = 0;
+
+  function renderOb() {
+    var s = steps[obIndex];
+    if (!s) { closeOb(); return; }
+    $('#obTitle').textContent = s.t;
+    $('#obBody').innerHTML = s.b;
+    $('#obDots').innerHTML = window.PubChatGuide.dots(steps.length, obIndex, 'dot');
+    $('#obNext').textContent = obIndex === steps.length - 1 ? '开始使用' : '下一步';
+  }
+  function openOb() {
+    if (!steps.length) { try { localStorage.setItem(LS_ONBOARD, '1'); } catch (e) {} return; }
+    obIndex = 0; renderOb(); $('#onboarding').classList.remove('hidden');
+  }
+  function closeOb() {
+    $('#onboarding').classList.add('hidden');
+    try { localStorage.setItem(LS_ONBOARD, '1'); } catch (e) {}
+  }
+
+  function toast(t) {
+    var el = document.createElement('div');
+    el.textContent = t;
+    el.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;z-index:90';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 1800);
+  }
+
+  /* ---------------- 返回栈 ---------------- */
+  window.pubchatBack = function () {
+    if (!$('#onboarding').classList.contains('hidden')) { closeOb(); return true; }
+    if (!$('#keyModal').classList.contains('hidden')) {
+      $('#keyModal').classList.add('hidden');
+      $('#btnJoin').disabled = false;
+      return true;
+    }
+    if (view === 'instance' || view === 'all' || view === 'join' || view === 'manage') {
+      show('screen-home');
+      renderHome();
+      return true;
+    }
+    return false;
+  };
+
+  /* ---------------- 事件 ---------------- */
+  $('#btnBack').onclick = function () { show('screen-home'); renderHome(); };
+  $('#btnBackAll').onclick = function () { show('screen-home'); renderHome(); };
+  $('#btnBackJoin').onclick = function () { show('screen-home'); };
+  $('#btnBackManage').onclick = function () { show('screen-home'); };
+  $('#btnHelp').onclick = openOb;
+  $('#btnManage').onclick = function () { show('screen-manage'); };
+  $('#btnOpenAdmin').onclick = function () { openAdmin(current); };
+  $('#btnCopyAdmin').onclick = copyAdminAddr;
+  $('#btnJoin').onclick = joinRemote;
+  $('#btnClaim').onclick = openClaim;
+  $('#obNext').onclick = function () {
+    if (obIndex < steps.length - 1) { obIndex++; renderOb(); }
+    else closeOb();
+  };
+  $('#obSkip').onclick = closeOb;
+
+  load();
+  try {
+    if (new URLSearchParams(location.search).get('skip') === '1') localStorage.setItem(LS_ONBOARD, '1');
+  } catch (e) {}
+  renderHome();
+  if (window.PubChatSplash) window.PubChatSplash.ready();
+  try { if (localStorage.getItem(LS_ONBOARD) !== '1') openOb(); } catch (e) { openOb(); }
+})();
+</script>
+</body>
+</html>

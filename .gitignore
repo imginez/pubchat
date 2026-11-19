@@ -1,0 +1,26 @@
+# 运行时生成/本机专有，不进仓库
+venv/
+data/
+*.pyc
+__pycache__/
+dist/
+build/
+
+# 本机配置与凭据（config.json 里有 admin key）
+config.json
+config.*.json
+!config.example.json
+tunnel.json
+*.env
+*.env.*
+*.pem
+*.key
+
+# 备份与临时目录
+*.bak
+*.bak-*
+.web.bak-*
+web.bak-*
+*.orig
+*.rej
+.pytest_cache/

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PubChat · 管理认领</title>
+<style>
+  :root{--ink:#1d2129;--muted:#86909c;--line:#e5e6eb;--bg:#f5f6f8;--brand:#2f6bff;--ok:#00a870;--err:#d93026}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:420px;margin:0 auto;padding:32px 18px 52px}
+  h1{font-size:18px;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 20px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:20px 22px;margin-bottom:16px}
+  .fp{font-family:ui-monospace,Consolas,monospace;font-size:13px;color:var(--muted);margin-bottom:16px;padding:8px 12px;background:#f7f8fa;border-radius:8px}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:15px;outline:none;background:#fff;letter-spacing:4px;text-align:center}
+  input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,107,255,.1)}
+  button{width:100%;border:none;background:var(--brand);color:#fff;border-radius:8px;padding:11px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:14px}
+  button:hover{filter:brightness(1.05)}
+  button[disabled]{opacity:.5;cursor:default}
+  .msg{font-size:13px;margin-top:12px;min-height:18px}
+  .msg.err{color:var(--err)}
+  .msg.ok{color:var(--ok)}
+  .secret-box{background:#f0faf5;border:1px solid #b7ebd8;border-radius:8px;padding:14px;margin-top:14px;word-break:break-all}
+  .secret-box code{font-size:13px;line-height:1.8;display:block;background:#fff;padding:8px 10px;border-radius:6px;border:1px solid #e5e6eb;margin:8px 0}
+  .secret-box .warn{color:var(--err);font-size:12px;margin-top:8px}
+  .muted{color:var(--muted)}
+  .go-admin{display:block;text-align:center;margin-top:14px;background:var(--brand);color:#fff;text-decoration:none;border-radius:8px;padding:10px;font-size:14px;font-weight:600}
+  .go-admin:hover{filter:brightness(1.05)}
+  .done-wrap{text-align:center;padding:20px 0}
+  .done-wrap h2{font-size:17px;margin:0 0 8px;color:var(--ok)}
+  @media(max-width:480px){.wrap{padding:20px 12px 40px}.card{padding:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="stepCard">
+    <h1>认领管理权</h1>
+    <p class="sub">输入终端上显示的 6 位数字，将这台设备登记为管理员。</p>
+    <div class="fp" id="fpLine">正在读取服务器信息…</div>
+    <label for="codeInput">6 位验证码</label>
+    <input id="codeInput" type="text" inputmode="numeric" maxlength="6"
+           pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="000000">
+    <div class="msg" id="msgLine"></div>
+    <button id="claimBtn" type="button" disabled>确认认领</button>
+  </div>
+
+  <div class="card" id="doneCard" style="display:none">
+    <div class="done-wrap">
+      <h2>认领成功</h2>
+      <p>这台设备已登记为管理员。下面的设备凭证只显示一次，请妥善保存。</p>
+    </div>
+    <div class="secret-box">
+      <strong>设备凭证（device_secret）</strong>
+      <code id="secretCode"></code>
+      <button id="copyBtn" type="button" style="margin-top:8px;width:auto;padding:8px 16px;font-size:13px">复制</button>
+      <div class="warn">请勿存入日志或发送给他人。关闭此页面后无法再次查看。</div>
+      <div class="muted" id="saveState" style="font-size:12px;margin-top:6px"></div>
+    </div>
+    <a class="go-admin" id="goAdmin" href="/admin.html">进入管理面板 →</a>
+    <p class="muted" style="text-align:center;font-size:12px;margin-top:8px">管理面板里可以改实例名、管理成员与邀请、查看和吊销设备。</p>
+  </div>
+</div>
+
+<script src="device.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* Red Line #2: token 只从 URL fragment 取，取完立刻清掉 */
+  var hash = location.hash || '';
+  var token = '';
+  var m = hash.match(/(?:^|#)b=([^&]+)/);
+  if (m) token = decodeURIComponent(m[1]);
+
+  /* 立刻用 replaceState 清掉 fragment，不进 Referer、不落历史记录 */
+  if (location.hash) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var msgLine = $('msgLine');
+  var codeInput = $('codeInput');
+  var claimBtn = $('claimBtn');
+  var stepCard = $('stepCard');
+  var doneCard = $('doneCard');
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function showMsg(text, isErr) {
+    msgLine.textContent = text;
+    msgLine.className = 'msg ' + (isErr ? 'err' : 'ok');
+  }
+
+  function syncBtn() {
+    claimBtn.disabled = !(token && /^\d{6}$/.test(codeInput.value));
+  }
+
+  /* 读服务器指纹（/api/meta 是公开只读接口） */
+  fetch('/api/meta', { cache: 'no-store' }).then(function (r) {
+    return r.json();
+  }).then(function (j) {
+    if (j && j.fingerprint) {
+      $('fpLine').textContent = '服务器指纹：' + j.fingerprint + (j.name ? ' · ' + j.name : '');
+    } else {
+      $('fpLine').textContent = '（无法读取服务器指纹）';
+    }
+  }).catch(function () {
+    $('fpLine').textContent = '（无法连接服务器）';
+  });
+
+  if (!token) {
+    showMsg('认领链接不完整（缺少 token）。请在终端重新获取链接。', true);
+  }
+
+  codeInput.addEventListener('input', function () {
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+    syncBtn();
+  });
+
+  claimBtn.addEventListener('click', function () {
+    var code = codeInput.value.trim();
+    if (!token || !/^\d{6}$/.test(code)) return;
+    claimBtn.disabled = true;
+    showMsg('正在提交…', false);
+
+    /* Red Line #2: token 和 code 只通过 POST body 发送，不进 URL */
+    fetch('/api/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, code: code })
+    }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+    }).then(function (res) {
+      if (res.ok && res.j.ok) {
+        /* 成功：显示设备凭证 */
+        stepCard.style.display = 'none';
+        doneCard.style.display = '';
+        $('secretCode').textContent = res.j.secret || '';
+        /* 凭证只留在本 origin 的 localStorage（Red Line #4: 不写 Cookie、不进 URL） */
+        if (window.PubChatDevice && res.j.secret) {
+          window.PubChatDevice.set(res.j.secret);
+          $('saveState').textContent = '已保存在本浏览器：下次打开本地址可直接进入管理，无需再输码。';
+        } else {
+          $('saveState').textContent = '本浏览器未能保存凭证，请先抄下上面这串。';
+        }
+        /* 清掉内存里的 token */
+        token = '';
+        showMsg('');
+
+        $('copyBtn').addEventListener('click', function () {
+          var s = res.j.secret || '';
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(s).then(function () {
+              $('copyBtn').textContent = '已复制';
+            });
+          } else {
+            var ta = document.createElement('textarea');
+            ta.value = s;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            $('copyBtn').textContent = '已复制';
+          }
+        });
+      } else {
+        var err = (res.j && res.j.error) || '未知错误';
+        claimBtn.disabled = false;
+        if (res.j && typeof res.j.attempts_left === 'number') {
+          showMsg(err + '（剩余 ' + res.j.attempts_left + ' 次）', true);
+          if (res.j.attempts_left <= 0) {
+            codeInput.disabled = true;
+            claimBtn.disabled = true;
+          }
+        } else {
+          showMsg(err, true);
+          codeInput.disabled = true;
+          claimBtn.disabled = true;
+        }
+      }
+    }).catch(function (err) {
+      showMsg('网络错误：' + err.message, true);
+      claimBtn.disabled = false;
+    });
+  });
+
+  syncBtn();
+})();
+</script>
+</body>
+</html>

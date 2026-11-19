@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PubChat · 管理</title>
+<style>
+  :root{--ink:#1d2129;--muted:#86909c;--line:#e5e6eb;--bg:#f5f6f8;--brand:#2f6bff;--ok:#00a870;--warn:#ff7d00;--err:#d93026}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:32px 20px 64px}
+  header{display:flex;align-items:baseline;gap:10px;margin-bottom:20px}
+  h1{font-size:24px;margin:0}
+  .ver{color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 8px 24px rgba(20,30,60,.04)}
+  .card h2{font-size:16px;margin:0 0 14px}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed #eef0f3;font-size:14px}
+  .row:last-child{border-bottom:0}
+  .row .k{color:var(--muted)}
+  .url{display:flex;align-items:center;gap:8px;margin:8px 0;padding:9px 11px;background:#f7f8fa;border-radius:9px;font-family:ui-monospace,Consolas,monospace;font-size:13px;word-break:break-all}
+  .url button{margin-left:auto;flex:none;border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
+  .qr{display:grid;place-items:center;padding:12px;background:#fff;border:1px solid var(--line);border-radius:12px;margin-top:10px}
+  .qr svg{width:190px;height:190px}
+  .muted{color:var(--muted);font-size:12px}
+  .tunnel{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-top:10px;color:var(--muted);font-size:13px}
+  .tunnel .pill{flex:none;white-space:nowrap}
+  .tunnel > span:last-child{min-width:0;word-break:break-all}
+  .pill{font-size:12px;padding:2px 9px;border-radius:99px;background:#f2f3f5;color:#4e5969}
+  .pill.on{background:#e8ffea;color:var(--ok)}
+  user-card{display:block}
+  .user{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .user .top{display:flex;align-items:center;gap:8px}
+  .user .name{font-weight:600}
+  .user .cid{color:var(--muted);font-size:12px;font-family:ui-monospace,Consolas,monospace}
+  .user .keys{margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#4e5969;display:none;word-break:break-all}
+  .user.open .keys{display:block}
+  .user .toggle{margin-left:auto;border:0;background:none;color:var(--brand);cursor:pointer;font:inherit;font-size:13px}
+  .agent{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-top:1px dashed #eef0f3}
+  .agent .aid{min-width:0;overflow-wrap:anywhere}
+  .agent .owner{color:var(--muted);font-size:12px}
+  .agent .amode{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none;color:var(--muted);font-size:12px}
+  .agent .mode-sel{padding:3px 7px;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit;font-size:12px;color:var(--ink);cursor:pointer;outline:none}
+  .agent .mode-sel:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,107,255,.1)}
+  .agent .akey{flex-basis:100%;word-break:break-all}
+  form.add{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:12px}
+  @media(max-width:640px){form.add{grid-template-columns:1fr}}
+  input,select{padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;outline:none;min-width:0;background:#fff}
+  input:focus,select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,107,255,.1)}
+  .btn{padding:9px 14px;border:0;border-radius:8px;background:var(--brand);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  .btn[disabled]{opacity:.5;cursor:default}
+  .btn.ghost{background:#f2f3f5;color:var(--ink)}
+  .btn.danger{background:#d93026}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  .err{color:#d93026;font-size:13px;min-height:18px;margin-top:6px}
+  .banner{margin-top:16px;padding:10px 12px;border-radius:10px;background:#fff7e8;color:#8a5a00;font-size:13px}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1d2129;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.show{opacity:1}
+  .scan-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;cursor:pointer}
+  .chk input{accent-color:var(--brand)}
+  .warn{margin-top:8px;color:#8a5a00;background:#fff7e8;border-radius:8px;padding:8px 10px;font-size:12px}
+  .modes{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0 6px;font-size:13px;color:#4e5969}
+  .modes label{display:flex;gap:5px;align-items:center;cursor:pointer}
+  .device{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .device .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .device .name{font-weight:600}
+  .device .meta{color:var(--muted);font-size:12px;margin-top:4px}
+  .device.current{border-color:var(--brand);background:#f7f9ff}
+  .device.revoked{opacity:.6}
+  .device .actions{margin-top:8px}
+  .pill.current{background:#e8f0ff;color:var(--brand)}
+  .pill.revoked{background:#ffece8;color:var(--err)}
+  .rollback-banner{margin-top:16px;padding:12px 14px;border-radius:10px;background:#fff7e8;border:1px solid #ffd591;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .rollback-banner .msg{flex:1;min-width:200px;font-size:13px;color:#8a5a00}
+  .rollback-banner .countdown{font-family:ui-monospace,Consolas,monospace;font-weight:600;color:#d46b08}
+  .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:999}
+  .confirm-overlay.show{display:flex}
+  .confirm-box{background:#fff;border-radius:14px;padding:20px 24px;max-width:380px;width:90%;box-shadow:0 12px 32px rgba(0,0,0,.15)}
+  .confirm-box h3{margin:0 0 10px;font-size:16px}
+  .confirm-box p{margin:0 0 16px;color:#4e5969;font-size:14px;line-height:1.5}
+  .confirm-box .btns{display:flex;gap:8px;justify-content:flex-end}
+  .dev-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:13px}
+  .dev-bar[hidden]{display:none}
+  .dev-bar .now{font-weight:600}
+  .dev-bar .btn{margin-left:auto}
+  .deny{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 24px;box-shadow:0 8px 24px rgba(20,30,60,.04)}
+  .deny[hidden]{display:none}
+  .deny h2{font-size:18px;margin:0 0 10px}
+  .deny p{color:#4e5969;font-size:13px;line-height:1.8;margin:0 0 8px}
+  .deny code{background:#f7f8fa;border-radius:6px;padding:2px 6px;font-size:12px}
+  .deny p.err{color:#d93026;font-weight:600}
+  body.denied .wrap > :not(#denyBox){display:none}
+  html.mode-server [data-local-only]{display:none!important}
+  .srv-line{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed #eef0f3;font-size:14px;flex-wrap:wrap}
+  .srv-line:last-of-type{border-bottom:0}
+  .srv-line .k{color:var(--muted);flex:none;min-width:64px}
+  .srv-line input[type="text"]{flex:1;min-width:140px}
+  .srv-data{font-size:12px;word-break:break-all;color:#4e5969}
+  .pub-panel{display:none;border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:8px}
+  .pub-panel.active{display:block}
+  .field{display:block;margin-bottom:8px}
+  .field span{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+  .field input{width:100%}
+  .row-btns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  html.embed body .wrap{padding-top:18px}
+  html.embed body header{display:none}
+  [data-section]{display:contents}
+  html.sec-seats body [data-section]:not([data-section="seats"]),
+  html.sec-server body [data-section]:not([data-section="server"]),
+  html.sec-devices body [data-section]:not([data-section="devices"]),
+  html.sec-public body [data-section]:not([data-section="public"]),
+  html.sec-qrcode body [data-section]:not([data-section="qrcode"]){display:none}
+</style>
+<script>
+  var SEC_KEYS = { seats: 1, server: 1, devices: 1, public: 1, qrcode: 1 };
+  if (window.parent && window.parent !== window) document.documentElement.className += ' embed';
+  (function () {
+    var m = location.search.match(/[?&]sec=([^&]+)/);
+    if (m) {
+      var sec = decodeURIComponent(m[1]);
+      if (SEC_KEYS[sec]) {
+        document.documentElement.className += ' sec-' + sec;
+      }
+    }
+  })();
+  /* 一次性管理链接的另一半：`/admin.html#t=xxx` 兑换成设备凭证。
+     服务端 `/api/admin/token/verify` 早就在了（200 给 secret，401 无效 /
+     409 已用过 / 410 过期），`hosts/local.py` 启动时自动打开的也正是这条 URL，
+     `guide.js` 与 `onboarding.html` 也都写着「打开并完成认领」——但 web 侧
+     一直没有调用方，链接打开了却什么都不发生。写在 head 里同步起跑：
+     device.js 只在 localStorage 有凭证时才注入 Bearer，晚一步 admin.js
+     就已经按 401 渲染完「需要凭证」那一屏了。 */
+  (function () {
+    var KEY = 'pubchat.device.secret';   // 与 device.js 同一把键，读写口径必须一致
+    var m = (location.hash || '').match(/(?:^|[#&])t=([^&]+)/);
+    if (!m) return;
+    var token = decodeURIComponent(m[1]);
+    // 令牌留在地址栏里会被历史与旁人看见，读完就摘掉（与 app.js 的处理一致）
+    try { history.replaceState(null, '', location.pathname + location.search); }
+    catch (e) { location.hash = ''; }
+    var has = '';
+    try { has = localStorage.getItem(KEY) || ''; } catch (e) {}
+    if (has) return;   // 这台浏览器已经认领过：再兑一次只会撞上 409「已使用」，不是故障
+    function tell(msg) {
+      // 只写自己那一格。denyDetail 归 admin.js（它按 401 渲染时会覆写），
+      // 借它的节点显示认领结果会晚一步被盖掉，用户就只看到一句通用文案。
+      function put() {
+        var el = document.getElementById('tokenClaimNote');
+        if (el) { el.textContent = msg; el.hidden = false; }
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put);
+      else put();
+    }
+    fetch('/api/admin/token/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        return { st: r.status, j: j };
+      });
+    }).then(function (res) {
+      if (res.st === 200 && res.j && res.j.secret) {
+        try { localStorage.setItem(KEY, res.j.secret); } catch (e) {}
+        location.reload();
+        return;
+      }
+      tell((res.j && res.j.error) ? res.j.error : ('认领失败（' + res.st + '）'));
+    }).catch(function () {
+      tell('认领失败：连不上本机服务');
+    });
+  })();
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>PubChat 管理</h1><span class="ver" id="ver"></span></header>
+
+  <div class="deny" id="denyBox" hidden>
+    <h2>需要管理员设备凭证</h2>
+    <p class="err" id="tokenClaimNote" hidden></p>
+    <p>这台浏览器还没有认领管理权限。用那条一次性管理链接<strong>直接打开本页</strong>（链接末尾带 <code>#t=…</code>），
+       打开即认领，本页会自动带上设备凭证；粘贴到别处或只点链接的域名部分都不算。</p>
+    <p>本机版：启动 PubChat 时浏览器会自动打开一次性管理链接（5 分钟内有效，只能用一次）；链接过期就重启 PubChat 重新生成。</p>
+    <p>公网服务器版：请服务器管理员生成认领链接（<code>--new-claim</code> 或已认领设备里「生成新链接」）。</p>
+    <p class="muted" id="denyDetail"></p>
+  </div>
+
+  <div data-section="seats">
+  <section class="card">
+    <h2>智能体席位</h2>
+    <div class="muted" style="margin:-6px 0 10px">这个实例里所有智能化身（二级 Key）的归属与接入方式。接入方式只是给智能体看的标签：值守在线（模式一）＝常驻监听；离线收件（模式二）＝靠 MCP 收件箱。切换不影响在线状态，也不会踢掉已连接的智能体。</div>
+    <div id="seatsList"></div>
+    <div class="muted" style="margin-top:10px">成员的显示名、一级 Key、席位上限、待审与移出在「成员与 Key」页签；邀请链接在「邀请」页签。</div>
+  </section>
+  </div>
+
+  <div data-section="server">
+  <section class="card" style="margin-top:16px;display:none" id="serverSection">
+    <h2>服务器设置</h2>
+    <div class="srv-line">
+      <span class="k">实例名</span>
+      <input id="srvName" type="text" maxlength="30" autocomplete="off">
+      <button class="btn sm" id="srvRename" type="button">改名</button>
+    </div>
+    <div class="srv-line">
+      <span class="k">加入审批</span>
+      <label class="chk"><input type="checkbox" id="srvApproval"> 新成员加入需要房主确认（先进待审列表）</label>
+    </div>
+    <div class="srv-line"><span class="k">指纹</span><span id="srvFp">-</span></div>
+    <div class="srv-line"><span class="k">端口</span><span id="srvPorts">-</span></div>
+    <div class="srv-line"><span class="k">数据目录</span><span class="srv-data" id="srvData">-</span></div>
+    <div class="row-btns" style="margin-top:12px">
+      <a class="btn ghost" id="srvMembersLink" href="/members.html?sec=members" target="_blank" rel="noopener">成员、邀请与房间 →</a>
+    </div>
+    <div class="muted" style="margin-top:8px">改名与加入审批会先二次确认；15 分钟内可一键回滚，超时自动转正。服务器端口与证书由反向代理管理，本程序不会自动重启。</div>
+  </section>
+  <div class="banner" id="serverUnavailable" hidden>这台实例不是云端服务器版，没有「服务器设置」这一层：实例名与加入审批只在服务器部署时存在。要改开机自启、桌面快捷方式、数据目录搬家，请用「本机服务（可选）」页签。</div>
+  <div id="rollbackBox"></div>
+  </div>
+
+  <div data-section="devices">
+  <div class="dev-bar" id="devBar" hidden>
+    <span class="now">当前设备：<b id="devCurrent">-</b></span>
+    <span class="muted" id="devBarHint">当前设备不在这里吊销自己，避免锁死</span>
+  </div>
+
+  <section class="card" id="deviceSection">
+    <h2>已授权设备</h2>
+    <div class="muted">管理这台实例的设备凭证。吊销后该设备需要重新认领。</div>
+    <div id="devices" style="margin-top:12px"></div>
+    <div class="row-btns" style="margin-top:12px">
+      <button class="btn ghost" id="newClaimBtn" type="button">生成新认领链接</button>
+      <button class="btn ghost" id="newTokenBtn" type="button">生成管理令牌链接</button>
+    </div>
+    <div id="claimResult" style="display:none;margin-top:12px"></div>
+    <div id="tokenResult" style="display:none;margin-top:12px"></div>
+  </section>
+  <div class="banner" id="devicesUnavailable" hidden>本机桌面版直接用 127.0.0.1 管理口，不需要设备凭证；「已授权设备」只在云端服务器部署（走 nginx/HTTPS 反代）时存在。</div>
+  </div>
+
+  <div data-section="qrcode">
+  <section class="card">
+    <h2>手机扫码进入</h2>
+    <div class="scan-bar">
+      <select id="scanUser"></select>
+    </div>
+    <div class="qr" id="qr"></div>
+    <div class="muted" id="qrHint"></div>
+    <div class="warn" id="qrWarn">安全提示：二维码不含 Key，请手动输入登录凭证。</div>
+  </section>
+  </div>
+
+  <div data-section="public">
+  <section class="card">
+    <h2>公网地址</h2>
+
+    <!-- 服务器部署（云端）时这块才有内容：地址由服务器/nginx 决定，程序改不了，只做只读展示 -->
+    <div class="banner" id="pubServerNote" hidden>
+      <div>这台实例部署在服务器上，公网地址由服务器与 nginx 决定，在这里只能看、不能改：</div>
+      <div class="row-btns" style="margin-top:10px;align-items:center">
+        <input id="pubServerUrl" readonly style="width:320px;max-width:100%" />
+        <button id="pubServerCopy" type="button"
+          style="padding:9px 18px;border-radius:8px;border:1px solid #E3E8EF;background:#fff;
+                 color:#374151;font-size:13px;cursor:pointer">复制</button>
+      </div>
+      <div class="muted" style="margin-top:8px">要换成别的域名，去服务器上改 nginx 与证书；本机部署才有「临时地址 / 固定域名 / 已有地址」这三选一。</div>
+    </div>
+
+    <div id="pubLocalBox">
+    <div class="modes">
+      <label><input type="radio" name="pubMode" value="quick"> 临时地址</label>
+      <label><input type="radio" name="pubMode" value="named"> 固定域名</label>
+      <label><input type="radio" name="pubMode" value="manual"> 已有地址</label>
+    </div>
+
+    <div class="pub-panel" id="pubQuick">
+      <div class="tunnel" id="tunnel">
+        <span class="pill" id="tunnelPill">未启用</span>
+        <span id="tunnelText">关掉程序即失效，下次启动会换新地址。</span>
+      </div>
+      <div class="row-btns">
+        <button class="btn" id="tunnelBtn" type="button">开启临时地址</button>
+      </div>
+      <div class="muted" id="tunnelHelp"></div>
+    </div>
+
+    <div class="pub-panel" id="pubNamed">
+      <label class="field"><span>Cloudflare 隧道 Token（只存本机，不回显）</span>
+        <input id="tokenInput" type="password" autocomplete="off"></label>
+      <label class="field"><span>固定域名（含 https://）</span>
+        <input id="publicUrlInput" placeholder="https://chat.example.com" autocomplete="off"></label>
+      <label class="chk"><input type="checkbox" id="autoStart"> 启动 PubChat 时自动开启</label>
+      <div class="row-btns">
+        <button class="btn" id="namedSave" type="button">保存并开启</button>
+        <button class="btn ghost" id="namedStop" type="button">停止</button>
+      </div>
+      <div class="muted" style="margin-top:8px">Token 只保存在本机数据目录；域名解析和证书由你自己的 Cloudflare 账号管理，本程序不碰。</div>
+    </div>
+
+    <div class="pub-panel" id="pubManual">
+      <label class="field"><span>公网地址（你的反向代理/别的隧道）</span>
+        <input id="manualUrlInput" placeholder="https://chat.example.com" autocomplete="off"></label>
+      <div class="row-btns"><button class="btn" id="manualSave" type="button">保存并显示</button></div>
+      <div class="muted" style="margin-top:8px">程序只负责展示和生成二维码，不会检查这个地址能不能打开。</div>
+    </div>
+
+    <div class="qr" id="tunnelQr" style="display:none"></div>
+    <div class="muted" id="tunnelQrHint" style="text-align:center"></div>
+    <div class="banner" id="tunnelBanner">临时地址由 Cloudflare 快速隧道提供，零账号、零配置，关掉程序就失效。要长期使用，选「固定域名」。</div>
+    </div>
+  </section>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3 id="confirmTitle">确认操作</h3>
+    <p id="confirmMsg"></p>
+    <div class="btns">
+      <button class="btn ghost" id="confirmCancel">取消</button>
+      <button class="btn danger" id="confirmOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<script src="qrcode.js"></script>
+<script src="device.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

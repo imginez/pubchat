@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PubChat · 关于</title>
+<style>
+  :root{--ink:#1d2129;--muted:#86909c;--line:#e5e6eb;--bg:#f5f6f8;--brand:#2f6bff;--ok:#00a870}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:680px;margin:0 auto;padding:32px 20px 64px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 8px 24px rgba(20,30,60,.04);margin-bottom:16px}
+  .card h2{font-size:18px;margin:0 0 16px}
+  .logo-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+  .logo{width:48px;height:48px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,#2f6bff,#5b8cff)}
+  .app-name{font-size:22px;font-weight:650}
+  .version{color:var(--muted);font-size:14px;margin-left:8px}
+  .muted{color:var(--muted);font-size:13px}
+  .feat{margin:10px 0 0;padding:0;list-style:none}
+  .feat li{position:relative;padding:5px 0 5px 22px;font-size:14px;color:#4e5969}
+  .feat li:before{content:"✓";position:absolute;left:0;top:5px;color:var(--ok);font-weight:700;font-size:13px}
+  .help-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .help-links a{display:inline-block;padding:8px 14px;border-radius:8px;background:#f2f6ff;color:var(--brand);font-size:13px;text-decoration:none;border:1px solid #dbe7ff}
+  .help-links a:hover{background:#e6efff}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed #eef0f3;font-size:14px}
+  .row:last-child{border-bottom:0}
+  .row .k{color:var(--muted)}
+  .download{margin:12px 0;padding:12px;background:#f7f8fa;border-radius:8px}
+  .download h3{margin:0 0 8px;font-size:14px}
+  .download a{display:inline-block;margin-right:12px;color:var(--brand);text-decoration:none;font-size:13px}
+  .download a:hover{text-decoration:underline}
+  .btn{padding:10px 18px;border:0;border-radius:8px;background:var(--brand);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.ghost{background:#f2f3f5;color:var(--ink)}
+  .update-status{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13px}
+  .update-status.has-update{background:#e8ffea;color:var(--ok)}
+  .update-status.no-update{background:#f7f8fa;color:var(--muted)}
+  .update-status.error{background:#ffece8;color:#d93026}
+  .manifest-field{margin-top:16px}
+  .manifest-field input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;outline:none}
+  .manifest-field input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,107,255,.1)}
+  .btn.small{padding:6px 12px;font-size:13px;font-weight:500}
+  .update-status.waiting{background:#fff7e8;color:#ff7d00}
+  .confirm{margin-top:12px;padding:12px;border:1px solid #ffd8a8;border-radius:8px;background:#fff7e8;font-size:13px}
+  .confirm b{font-size:14px;word-break:break-all}
+  .note{margin-top:10px;padding:10px 12px;background:#f7f8fa;border-radius:8px;font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .warnbar{padding:12px;border-radius:8px;background:#fff7e8;color:#ff7d00;font-size:13px}
+  .download .meta{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+  .notice-item{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:8px}
+  .notice-item .hd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .notice-item .ver{background:#e7f7ef;color:var(--ok);border-radius:6px;padding:1px 7px;font-size:12px;font-weight:600}
+  .notice-item .date{color:var(--muted);font-size:12px}
+  .notice-item .tt{font-size:14px;font-weight:600;margin-top:6px}
+  .notice-item .bd{font-size:13px;color:var(--muted);margin-top:4px;white-space:pre-wrap;word-break:break-word}
+  html.embed body .wrap{padding-top:18px}
+</style>
+<script src="device.js"></script>
+<script>
+  if (window.parent && window.parent !== window) document.documentElement.className += ' embed';
+</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="logo-row">
+      <img class="logo" src="/icon.png" alt="PubChat">
+      <div>
+        <span class="app-name">PubChat</span>
+        <span class="version" id="version">v-</span>
+      </div>
+    </div>
+    <p class="muted">轻量的公共聊天室：一个人开房间，朋友用邀请链接进来聊天；AI 智能体也能作为成员加入对话。聊天记录存在你自己的电脑或服务器上。</p>
+  </div>
+
+  <div class="card">
+    <h2>它能做什么</h2>
+    <ul class="feat">
+      <li>本机部署或服务器部署，数据都掌握在你自己手里</li>
+      <li>智能体接入：一级 Key 登录、二级 Key 给智能体用，支持在线值守与离线收件</li>
+      <li>房间与权限：公开大厅、私聊、邀请制房间，房主不会被成员踢出</li>
+      <li>桌面 / 网页 / 手机三端，同一套账号</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>帮助与反馈</h2>
+    <p class="muted">第一次用、接智能体、自建实例遇到问题，先看手册；手册里没有的再找管理员。</p>
+    <div class="help-links">
+      <a href="https://github.com/imginez/pubchat" target="_blank" rel="noreferrer">项目主页</a>
+      <a href="https://github.com/imginez/pubchat/releases/latest" target="_blank" rel="noreferrer">下载最新版本</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>下载客户端</h2>
+    <p class="muted">三端下载地址全部来自发布源清单。本软件不会自动下载、也不会自动运行任何东西：点链接自己下载，再自己覆盖安装。</p>
+    <div id="downloadSources">
+      <p class="muted" id="noSource">发布源未配置。请在下方填入版本清单地址，或联系管理员获取下载链接。</p>
+    </div>
+
+    <div class="manifest-field">
+      <label class="muted" style="display:block;margin-bottom:6px">版本清单地址（latest.json，仅 https://）</label>
+      <input id="manifestUrl" type="url" placeholder="https://example.com/pubchat-dist/latest.json">
+      <button class="btn ghost" id="saveManifest" type="button" style="margin-top:8px">保存</button>
+      <div class="confirm" id="confirmBox" style="display:none">
+        <div>需要你确认发布源域名后清单才会生效（防域名被劫持后换包）：</div>
+        <div style="margin:6px 0"><b id="confirmHost">-</b></div>
+        <div class="muted" id="confirmFrom"></div>
+        <button class="btn small" id="confirmBtn" type="button" style="margin-top:8px">确认这个域名并检查</button>
+        <button class="btn ghost small" id="confirmCancel" type="button" style="margin-top:8px">先不确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>检查更新</h2>
+    <button class="btn" id="checkUpdate" type="button">检查更新</button>
+    <button class="btn ghost small" id="dismissBtn" type="button" style="display:none">忽略这个版本</button>
+    <div class="update-status" id="updateStatus" style="display:none"></div>
+    <div class="note" id="updateNote" style="display:none"></div>
+    <div class="muted" id="lastChecked" style="margin-top:8px"></div>
+    <div class="muted" id="lastResult" style="margin-top:4px"></div>
+  </div>
+
+  <div class="card">
+    <h2>更新公告</h2>
+    <div class="muted" id="noticeHint">服务器没有下发公告时，这里不会有内容。</div>
+    <div id="noticeList"></div>
+  </div>
+
+  <div class="card">
+    <h2>运行信息</h2>
+    <div class="row"><span class="k">数据目录</span><span id="dataDir">-</span></div>
+    <div class="row"><span class="k">部署模式</span><span id="deployMode">-</span></div>
+    <div class="row"><span class="k">已信任的发布源</span><span id="trustedHost">未确认</span></div>
+  </div>
+
+  <div class="card warnbar">
+    清单只用来告诉你「哪儿能下到新版本」。sha256 显示前 12 位供你自己核对下载到的文件；软件不替你校验安装，也不替你运行。
+  </div>
+</div>
+
+<script src="notice.js"></script>
+<script>
+(function () {
+  var currentVersion = '';
+  var pendingConfirmHost = '';   // 等用户点「确认」的发布源域名
+  var latestShown = '';          // 本次/上次检查得到的最新版本号
+  var dismissedShown = '';       // 用户已忽略的版本号
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function post(body) {
+    return fetch('/api/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); });
+  }
+
+  var END_LABEL = { desktop: '桌面版 (Windows)', android: '安卓版 (APK)', server: '服务器版' };
+
+  function hostOfUrl(u) {
+    var s = String(u || '');
+    var i = s.indexOf('//');
+    if (i < 0) return '';
+    s = s.slice(i + 2);
+    var j = s.indexOf('/');
+    return j < 0 ? s : s.slice(0, j);
+  }
+
+  function humanSize(n) {
+    n = Number(n);
+    if (!isFinite(n) || n <= 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+    return (n / 1048576).toFixed(1) + ' MB';
+  }
+
+  function renderNoSource() {
+    document.getElementById('downloadSources').innerHTML =
+      '<p class="muted">发布源未配置或还没确认。填好地址并确认后，这里会列出桌面版 / 安卓版 / 服务器版的下载地址。</p>';
+  }
+
+  // 下载地址全部来自清单；页面不硬编码任何发布域名（需求方的口径：托管在哪以后再搞）
+  function renderDownloads(manifest) {
+    var ends = manifest && manifest.ends;
+    if (!ends || !Object.keys(ends).length) { renderNoSource(); return; }
+    var order = ['desktop', 'android', 'server'];
+    var keys = Object.keys(ends).sort(function (a, b) {
+      var ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    var html = '';
+    keys.forEach(function (name) {
+      var item = ends[name] || {};
+      if (!item.url) return;
+      var meta = [];
+      if (item.size) meta.push(humanSize(item.size));
+      if (item.sha256) meta.push('SHA256 ' + String(item.sha256).slice(0, 12) + '…');
+      if (item.min) meta.push('需 ' + item.min);
+      if (item.schema) meta.push('库结构 v' + item.schema);
+      html += '<div class="download"><h3>' + esc(END_LABEL[name] || name) + '</h3>';
+      html += '<a href="' + esc(item.url) + '" target="_blank" rel="noreferrer noopener">下载 v'
+            + esc(item.version || '?') + '</a>';
+      if (meta.length) html += '<span class="meta">' + esc(meta.join(' · ')) + '</span>';
+      html += '</div>';
+    });
+    document.getElementById('downloadSources').innerHTML =
+      html || '<p class="muted">清单里没有可用的下载地址。</p>';
+  }
+
+  function showConfirm(host, changedFrom) {
+    pendingConfirmHost = host || '';
+    document.getElementById('confirmHost').textContent = pendingConfirmHost || '-';
+    document.getElementById('confirmFrom').textContent = changedFrom
+      ? '原本信任的是 ' + changedFrom + '；不确认就继续用原来的发布源。'
+      : '确认之后才会有第一次比对结果；未确认前清单不生效。';
+    document.getElementById('confirmBox').style.display = '';
+  }
+
+  function hideConfirm() {
+    document.getElementById('confirmBox').style.display = 'none';
+    pendingConfirmHost = '';
+  }
+
+  function setStatus(cls, text) {
+    var el = document.getElementById('updateStatus');
+    el.className = 'update-status ' + (cls || '');
+    el.textContent = text || '';
+    el.style.display = text ? '' : 'none';
+  }
+
+  function applyUpdateResult(res) {
+    if (res.need_confirm) {
+      setStatus('waiting', '发布源域名还没确认，检查未执行。');
+      showConfirm(res.host, '');
+      document.getElementById('updateNote').style.display = 'none';
+      document.getElementById('dismissBtn').style.display = 'none';
+      return;
+    }
+    if (!res.ok) {
+      setStatus('error', '检查失败：' + (res.error || '未知原因'));
+      document.getElementById('updateNote').style.display = 'none';
+      document.getElementById('dismissBtn').style.display = 'none';
+      return;
+    }
+    hideConfirm();
+    latestShown = res.latest || '';
+    dismissedShown = res.dismissed || '';
+    if (res.has_update) {
+      setStatus('has-update', '发现新版本 v' + res.latest + '（当前 v' + currentVersion + '）');
+      document.getElementById('dismissBtn').style.display = '';
+    } else if (res.latest && res.latest === currentVersion) {
+      setStatus('no-update', '当前 v' + currentVersion + ' 已是最新');
+      document.getElementById('dismissBtn').style.display = 'none';
+    } else {
+      setStatus('no-update', '发布源最新 v' + (res.latest || '?') + '，当前 v' + currentVersion
+        + (dismissedShown === res.latest ? '；这个版本你已忽略' : '，无需更新'));
+      document.getElementById('dismissBtn').style.display = 'none';
+    }
+    var note = [res.note, res.released_at ? '发布：' + res.released_at : '',
+                res.channel ? '通道：' + res.channel : ''].filter(Boolean).join('\n');
+    document.getElementById('updateNote').textContent = note;
+    document.getElementById('updateNote').style.display = note ? '' : 'none';
+    if (res.ends) renderDownloads({ ends: res.ends });
+  }
+
+  function el(id) { return document.getElementById(id); }
+
+  function setBusy(text) {
+    var btn = el('checkUpdate');
+    btn.disabled = true;
+    setStatus('waiting', text || '正在检查…');
+    el('updateNote').style.display = 'none';
+    el('dismissBtn').style.display = 'none';
+  }
+
+  function runCheck(confirmHost) {
+    setBusy(confirmHost ? '已确认，正在检查…' : '正在检查…');
+    post({ action: 'check_update', confirm_host: confirmHost || '' })
+      .then(function (res) {
+        el('checkUpdate').disabled = false;
+        applyUpdateResult(res);
+        loadState();
+      })
+      .catch(function (err) {
+        el('checkUpdate').disabled = false;
+        setStatus('error', '检查失败：' + err.message);
+      });
+  }
+
+
+  function loadState() {
+    fetch('/api/state')
+      .then(function (r) { return r.json(); })
+      .then(function (st) {
+        currentVersion = st.version || '';
+        el('version').textContent = 'v' + currentVersion;
+        el('dataDir').textContent = st.data_dir || '-';
+      })
+      .catch(function () {});
+
+    fetch('/api/deploy')
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.ok) return;
+        el('deployMode').textContent = res.mode === 'remote' ? '服务器部署' : '本机部署';
+        var up = res.update || {};
+        if (up.manifest_url) el('manifestUrl').value = up.manifest_url;
+        el('trustedHost').textContent = up.trusted_host || '未确认';
+        el('lastChecked').textContent = up.last_checked ? '上次检查：' + up.last_checked : '';
+        el('lastResult').textContent = up.last_result ? '上次结果：' + up.last_result : '';
+        dismissedShown = up.dismissed_version || '';
+        latestShown = up.latest_version || '';
+        if (up.manifest && up.manifest.ends) {
+          renderDownloads(up.manifest);
+        } else {
+          renderNoSource();
+        }
+        // 未确认的新域名：进场就把确认框摆出来，不用等用户点检查才发现
+        if (up.manifest_url && !up.trusted_host) showConfirm(hostOfUrl(up.manifest_url), '');
+        else if (up.last_result && up.last_result.indexOf('待确认发布源域名') === 0)
+          showConfirm(up.trusted_host || hostOfUrl(up.manifest_url), '');
+        else hideConfirm();
+      })
+      .catch(function () {});
+  }
+
+  el('saveManifest').addEventListener('click', function () {
+    var url = el('manifestUrl').value.trim();
+    post({ action: 'set_manifest', url: url })
+      .then(function (res) {
+        if (!res.ok) {
+          setStatus('error', '保存失败：' + (res.error || '未知原因'));
+          return;
+        }
+        renderNoSource();
+        if (res.need_confirm) {
+          showConfirm(res.host, res.changed_from || '');
+          setStatus('waiting', '已保存。发布源域名需要你确认一次，确认前清单不生效。');
+        } else if (url) {
+          hideConfirm();
+          setStatus('no-update', '已保存发布源。');
+          runCheck('');
+        } else {
+          hideConfirm();
+          el('updateStatus').style.display = 'none';
+        }
+        loadState();
+      })
+      .catch(function (err) { setStatus('error', '保存失败：' + err.message); });
+  });
+
+  el('confirmBtn').addEventListener('click', function () {
+    if (!pendingConfirmHost) { hideConfirm(); return; }
+    // 确认动作只把域名交给后端，仍然走同一次 check_update；后端校验一致才写 trusted_host
+    runCheck(pendingConfirmHost);
+  });
+
+  el('confirmCancel').addEventListener('click', function () {
+    hideConfirm();
+    setStatus('waiting', '未确认发布源，清单暂不生效。随时可以点「检查更新」再来一次。');
+  });
+
+  el('dismissBtn').addEventListener('click', function () {
+    if (!latestShown) return;
+    post({ action: 'dismiss_update', version: latestShown })
+      .then(function () {
+        el('dismissBtn').style.display = 'none';
+        setStatus('no-update', '已忽略 v' + latestShown + '，这个版本不再提醒。');
+        loadState();
+      })
+      .catch(function (err) { setStatus('error', '忽略失败：' + err.message); });
+  });
+
+  el('checkUpdate').addEventListener('click', function () {
+    runCheck(pendingConfirmHost);
+  });
+
+  /* 往期公告由外壳转交：每条公告记在实例自己的源上，这个页面（管理口）够不着那个源。
+     正文一律 textContent，绝不拼进 HTML。 */
+  function renderNotices(list) {
+    var box = el('noticeList');
+    box.textContent = '';
+    var rows = Array.isArray(list) ? list.filter(function (n) {
+      return n && typeof n === 'object' && n.version;
+    }) : [];
+    el('noticeHint').style.display = rows.length ? 'none' : '';
+    rows.forEach(function (n) {
+      var item = document.createElement('div');
+      item.className = 'notice-item';
+      var hd = document.createElement('div');
+      hd.className = 'hd';
+      var ver = document.createElement('span');
+      ver.className = 'ver';
+      ver.textContent = 'v' + n.version;
+      hd.appendChild(ver);
+      var date = (window.PubChatNotice ? PubChatNotice.when(n.published_at || '') : (n.published_at || ''));
+      if (date) {
+        var d = document.createElement('span');
+        d.className = 'date';
+        d.textContent = date;
+        hd.appendChild(d);
+      }
+      var tt = document.createElement('div');
+      tt.className = 'tt';
+      tt.textContent = n.title || '更新公告';
+      var bd = document.createElement('div');
+      bd.className = 'bd';
+      bd.textContent = n.body || '';
+      item.appendChild(hd); item.appendChild(tt); item.appendChild(bd);
+      box.appendChild(item);
+    });
+  }
+
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin || !e.data) return;
+    if (e.data.type === 'pubchat-about-notices') renderNotices(e.data.list);
+  });
+  if (window.parent && window.parent !== window) {
+    try { window.parent.postMessage({ type: 'pubchat-about-ready' }, location.origin); } catch (e) {}
+  }
+
+  loadState();
+})();
+</script>
+</body>
+</html>

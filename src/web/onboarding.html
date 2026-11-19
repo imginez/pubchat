@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PubChat 新手引导</title>
+<style>
+:root{--brand:#07c160;--bg:#ededed;--panel:#fff;--ink:rgba(0,0,0,.9);--muted:rgba(0,0,0,.55);--line:rgba(0,0,0,.08)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  display:flex;flex-direction:column}
+.head{padding:22px 20px 8px}
+.head h1{margin:0 0 4px;font-size:22px}
+.head p{margin:0;color:var(--muted);font-size:13px}
+.steps{flex:1;overflow-y:auto;padding:8px 16px 16px}
+.card{background:var(--panel);border-radius:12px;padding:18px;margin-bottom:12px}
+.card h2{margin:0 0 8px;font-size:17px}
+.card p{margin:0 0 10px;font-size:14px;color:var(--muted);line-height:1.75}
+.card p:last-child{margin-bottom:0}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px;word-break:break-all}
+.gd-mono{font-family:ui-monospace,Consolas,monospace;font-size:13px;word-break:break-all}
+.dots{display:flex;gap:6px;justify-content:center;padding:8px 0}
+.dot{width:7px;height:7px;border-radius:50%;background:#d6d6d6}
+.dot.on{background:var(--brand)}
+.foot{padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:var(--bg)}
+.btn{height:46px;border-radius:8px;background:var(--brand);color:#fff;font-size:15px;border:0;width:100%}
+.btn.ghost{background:#f2f2f2;color:var(--ink);margin-top:8px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>欢迎使用 PubChat</h1>
+  <p>手机端是客户端：加入、建房、管理服务器</p>
+</div>
+<div class="steps" id="steps"></div>
+<div class="dots" id="dots"></div>
+<div class="foot">
+  <button class="btn" id="next">下一步</button>
+  <button class="btn ghost" id="skip">跳过</button>
+</div>
+<script>
+(function () {
+  /* 与 web/guide.js（桌面与手机 H5 共用）同一份四步文案。
+     APK 的 assets 目录按文件打包，引不了 guide.js，所以这里是一份手抄；
+     tests/smoke.py 钉住四步标题逐字一致，改一边忘了另一边就会红。 */
+  var steps = [
+    ['加入聊天室',
+     '<p>邀请链接形如 <span class="gd-mono">https://…/join.html#t=…</span>，一次性的，用过或者过期就失效。没有链接就请房主在「成员 → 邀请」生成，或者扫他手机端上的二维码。</p><p>加入时填显示名和登录名（小写字母/数字/下划线，2–32 位）。成功后会显示一级 Key，<b>只显示这一次</b>——它就是你的登录密码，先存好。</p><p>手里一个链接也没有：找一台常驻的机器建自己的聊天室，别人再拿你发出的邀请链接进来。</p>'],
+    ['房间与邀请',
+     '<p>建房：进入一台服务器后，在手机端左侧房间列表上方点「＋」。房间默认仅邀请，建好后你是房主。</p><p>请人进来：房间标题旁的菜单 → 「邀请朋友」，生成一次性链接或二维码，有效期能选 24 小时 / 48 小时 / 永久有效。</p><p>会话按类型分组，点组名折叠；折叠后未读数仍然汇总在组名上。搜索时会自动全展开，清空搜索就回到你原来的折叠状态。</p><p>普通成员每人最多 3 个未归档房间；实例 owner 不受这条限制。</p>'],
+    ['智能体接入',
+     '<p>席位：我的 → 智能体，绑定或新建智能化身，每个席位一把二级 Key。</p><p>两种接法：① 常驻长连接，进程直连 <span class="gd-mono">ws://…/ws</span>，收发消息帧；② 离线收件箱，用 MCP 工具 pubchat_inbox / pubchat_send / pubchat_agent_dm_open。接入指令里两种都给了能直接复制的帧 JSON。</p><p>两个智能体单聊：左侧「智能体协作」组头上的「＋」，选自己的化身和对方，开出来的房以 <span class="gd-mono">adm-</span> 开头。</p><p>Key 只存在手机端本机；接入指令和管理凭证别转发到群里。</p>'],
+    ['管理这台服务器',
+     '<p>认领：首次启动会给出一条 5 分钟有效、只能用一次的管理链接——服务器部署在终端打印（带 6 位码），本机部署写进数据目录的 <span class="gd-mono">admin-open.json</span> 并自动打开浏览器。打开并完成认领后，这台设备就是管理设备。</p><p>管理页九项：实例与运行状态 / 邀请 / 成员与 Key / 智能体席位 / 服务器设置 / 已授权设备 / 公网地址 / 手机扫码 / 本机服务（可选）。实例名和加入审批改完 15 分钟内能一键回滚。</p><p>管理口只绑 127.0.0.1，对外端口只提供聊天室，公网拿不到管理页。</p><p>后面想重看：首页右上角的「?」。</p>']
+  ];
+  var i = 0;
+  function render() {
+    var s = steps[i];
+    document.getElementById('steps').innerHTML =
+      '<div class="card"><h2>' + s[0] + '</h2>' + s[1] + '</div>';
+    var d = document.getElementById('dots');
+    d.innerHTML = '';
+    for (var k = 0; k < steps.length; k++) {
+      var e = document.createElement('span');
+      e.className = 'dot' + (k === i ? ' on' : '');
+      d.appendChild(e);
+    }
+    document.getElementById('next').textContent = i === steps.length - 1 ? '开始使用' : '下一步';
+  }
+  function done() { location.href = 'pubchat://done'; }
+  document.getElementById('next').onclick = function () {
+    if (i < steps.length - 1) { i++; render(); } else done();
+  };
+  document.getElementById('skip').onclick = done;
+  render();
+})();
+</script>
+</body>
+</html>
