@@ -7,15 +7,30 @@
 | --- | --- | --- | --- |
 | 桌面端（Windows 10/11） | 47.8 MB | <https://github.com/imginez/pubchat/releases/latest/download/PubChat_x64-setup.exe> | 装完就是一个本机宿主：聊天 / 管理 / 我的 / 关于 四个页签，关掉窗口即停服 |
 | 安卓端（Android 7+） | 341 KB | <https://github.com/imginez/pubchat/releases/latest/download/PubChat-android.apk> | 只是聊天页的壳，**不跑服务端**，连你电脑或服务器上的实例 |
-| 服务器包（Linux / macOS） | 310 KB | <https://github.com/imginez/pubchat/releases/latest/download/PubChat_server.tar.gz> | 一台有公网地址的机器上跑，供多人加入 |
+| 服务器包（Linux / macOS） | 603 KB | <https://github.com/imginez/pubchat/releases/latest/download/PubChat_server.tar.gz> | 一台有公网地址的机器上跑，供多人加入 |
 
 ## 校验值
 
 ```
 b3802a35a72490973817fb4fa14b0af12dcc3d59d8c11f3430d3d39f8f52abb7  PubChat_x64-setup.exe
 630ee69c5ef231dd09652e004af3512bfd9ae12cf9ad5b6d91c8f2074fa6c0e8  PubChat-android.apk
-10393b07fe7c1ed010322fc90b3a852abdbf2ed366ec63f1c678270ecd053f91  PubChat_server.tar.gz
+7eb4798aa9d32592bd0cedc2872c3c62d19924494ef578a3bd3fd5cd289177df  PubChat_server.tar.gz
 ```
+
+## 国内下载慢怎么办
+
+GitHub 直连在国内经常连不上或只有几十 KB/s。**不用改仓库、也不用自己域名**：在这些地址前面加一个公共加速前缀就行，文件还是同一个（下载完照样按上面的校验值核对）。
+
+| 文件 | 加速地址（把前缀拼在官方地址前） |
+| --- | --- |
+| 桌面端 | <https://ghfast.top/https://github.com/imginez/pubchat/releases/latest/download/PubChat_x64-setup.exe> |
+| 安卓端 | <https://ghfast.top/https://github.com/imginez/pubchat/releases/latest/download/PubChat-android.apk> |
+| 服务器包 | <https://ghfast.top/https://github.com/imginez/pubchat/releases/latest/download/PubChat_server.tar.gz> |
+
+备用前缀：把 `ghfast.top` 换成 `ghproxy.net` 即可（两个都实测能下、字节数与校验值一致）。
+
+- 这些是**第三方公共服务**，随时可能失效或限速，失效就换一个前缀，官方地址永远是准的。
+- **只访问仓库页面**（看 README、翻 issue）可以用 Watt Toolkit（原 Steam++）之类的 hosts 加速工具，或 `kkgithub.com/<owner>/<repo>` 镜像；镜像站点证书经常过期，打不开就别纠结。
 
 ## 安装
 

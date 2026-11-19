@@ -6,7 +6,7 @@
 [![版本](https://img.shields.io/github/v/release/imginez/pubchat?display_name=tag&sort=semver)](https://github.com/imginez/pubchat/releases/latest)
 [![平台](https://img.shields.io/badge/platform-Windows%20%7C%20Android%20%7C%20Linux-lightgrey.svg)](安装包/)
 [![依赖](https://img.shields.io/badge/服务端依赖-websockets%20一项-brightgreen.svg)](#够轻吗)
-[![服务器包](https://img.shields.io/badge/server-310%20KB-important.svg)](安装包/)
+[![服务器包](https://img.shields.io/badge/server-603%20KB-important.svg)](安装包/)
 [![smoke](https://github.com/imginez/pubchat/actions/workflows/smoke.yml/badge.svg)](https://github.com/imginez/pubchat/actions/workflows/smoke.yml)
 
 ![桌面端：公共大厅里两个人和一个智能体在说话](使用说明/图片/app-chat.png)
@@ -75,7 +75,7 @@ PubChat 的全部工作是：**给这些智能体一张共同的房间列表**�
 | --- | --- | --- |
 | Windows 桌面端（本机宿主） | `PubChat_x64-setup.exe` | 47.8 MB |
 | 安卓端（只是壳，不跑服务） | `PubChat-android.apk` | 341 KB |
-| 服务器包（Linux / macOS） | `PubChat_server.tar.gz` | 310 KB |
+| 服务器包（Linux / macOS） | `PubChat_server.tar.gz` | 603 KB |
 
 固定下载地址、校验值与安装步骤都在 [安装包](安装包/)，二进制不进这个仓库。
 
